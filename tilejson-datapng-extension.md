@@ -54,12 +54,23 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
   "tiles": [ "https://tiles.gsj.jp/tiles/elev/mixed/{z}/{y}/{x}.png" ],
   "minzoom": 0,
   "maxzoom": 15,
+  "tileSize": 256,
 
   "datapng": {
     // ── 本拡張で定義するフィールド群 ──
   }
 }
 ```
+
+### 2.1 `tileSize` — タイルサイズ
+
+TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフィールドがない。本拡張では TileJSON のルートオブジェクトに **`tileSize`** フィールド（Number）を追加する。
+
+| キー | 型 | 必須 | デフォルト | 説明 |
+|------|----|------|-----------|------|
+| `tileSize` | Number | OPTIONAL | `256` | タイル画像の一辺のピクセル数 |
+
+> **注記**: `tileSize` はタイル画像の物理的なピクセルサイズであり、データソース固有の属性である。MapLibre GL JS 等の地図ライブラリでは Style JSON のソース定義で `tileSize` を指定するが、同一ソースを複数レイヤーで共有する場合、データソース側（TileJSON）で定義する方が合理的である。
 
 クライアントは `datapng` オブジェクト内の未知のキーを無視しなければならない（MUST）。
 
@@ -422,7 +433,7 @@ v = factor × rawValue + offset
 
 ## 5. JSON Schema
 
-以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。
+以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。ルートレベルの `tileSize` フィールドは TileJSON ルートオブジェクトのプロパティであり、本スキーマの対象外である。
 
 > **注記**: `$id` はドラフト段階のプレースホルダーであり、正式公開時に実際のホスティングURLへ変更する。
 
