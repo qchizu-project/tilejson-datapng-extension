@@ -318,11 +318,11 @@ v = factor × rawValue + offset
 ```json
 {
   "tilejson": "3.0.0",
-  "name": "地理院標高タイル（DEM5A）",
+  "name": "地理院標高タイル（DEM5C）",
   "description": "国土地理院 基盤地図情報数値標高モデル 5mメッシュ。標高基準面: 東京湾平均海面。",
   "attribution": "国土地理院",
   "tiles": [
-    "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/{z}/{x}/{y}.png"
+    "https://cyberjapandata.gsi.go.jp/xyz/dem5c_png/{z}/{x}/{y}.png"
   ],
   "minzoom": 1,
   "maxzoom": 15,
