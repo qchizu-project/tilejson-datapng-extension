@@ -276,7 +276,6 @@ v = factor × rawValue + offset
   "datapng": {
     "type": "numerical",
     "factor": 0.01,
-    "offset": 0,
     "unit": "m",
     "verticalCrs": "EPSG:6695",
     "pixelMapping": "northwest",
@@ -302,7 +301,6 @@ v = factor × rawValue + offset
   "datapng": {
     "type": "numerical",
     "factor": 0.01,
-    "offset": 0,
     "unit": "m",
     "invalidColor": [128, 0, 0],
     "verticalCrs": "EPSG:6695",
@@ -486,7 +484,7 @@ v = factor × rawValue + offset
 
 ### 6.3 凡例項目の拡張性
 
-凡例項目オブジェクトに本仕様で定義されていないメンバーが含まれる場合、クライアントはそれらを無視しなければならない（MUST）。これにより、シンボル画像URL、数値範囲、表示順序、グループ階層等をアプリケーション固有に追加できる。
+凡例項目オブジェクトの拡張ルールについては §3.3.1 を参照。
 
 ---
 
@@ -498,7 +496,7 @@ v = factor × rawValue + offset
 | `factor` | Number | ○ | — | `1` |
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
-| `invalidColor` | [r,g,b] | ○ | ○ | — |
+| `invalidColor` | [r,g,b] | ○ | — | — |
 | `legend` | Obj/URL | — | ○ | — |
 | `verticalCrs` | String | ○ | — | — |
 | `pixelMapping` | String | ○ | ○ | `"area"` |
