@@ -72,13 +72,13 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 
 > **注記**: `tileSize` はタイル画像の物理的なピクセルサイズであり、データソース固有の属性である。MapLibre GL JS 等の地図ライブラリでは Style JSON のソース定義で `tileSize` を指定するが、同一ソースを複数レイヤーで共有する場合、データソース側（TileJSON）で定義する方が合理的である。
 
-クライアントは `datapng` オブジェクト内の未知のキーを無視しなければならない（MUST）。
-
-`datapng.type` に対して該当しないフィールド（例: `type: "palette"` 時の `factor`・`offset`）が含まれていた場合、クライアントはそれらを無視しなければならない（MUST）。
-
 ---
 
 ## 3. フィールド定義
+
+クライアントは `datapng` オブジェクト内の未知のキーを無視しなければならない（MUST）。
+
+`datapng.type` に対して該当しないフィールド（例: `type: "palette"` 時の `factor`・`offset`）が含まれていた場合、クライアントはそれらを無視しなければならない（MUST）。
 
 ### 3.1 `datapng.type` — データPNG種別
 
@@ -592,7 +592,7 @@ v = factor × rawValue + offset
 | `dataRange` | Object | ○ | — | — |
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
-| `verticalCrs` | String | ○ | — | — |
+| `verticalCrs` | String | ○ | ○ | — |
 | `pixelMapping` | String | ○ | ○ | — |
 | `resampling` | String | ○ | ○ | — |
 
