@@ -199,16 +199,20 @@ v = factor × rawValue + offset
 |------|----|------|-----------|------|
 | `verticalCrs` | String | OPTIONAL | — | 鉛直座標参照系（EPSG コード形式を推奨） |
 
+値には EPSG コード形式（`"EPSG:NNNNN"`）を推奨する。各国・地域の鉛直基準面や全球ジオイドモデルに対応する EPSG コードを指定できる。
+
 主な指定例:
 
 | 値 | 意味 |
 |----|------|
-| `"EPSG:6695"` | 東京湾平均海面（JGD2011 vertical height） |
-| `"EPSG:105604"` | 東京湾平均海面（JGD2024 vertical height） |
-| `"EPSG:3855"` | EGM2008 ジオイド高 |
-| `"EPSG:5773"` | EGM96 ジオイド高 |
+| `"EPSG:3855"` | EGM2008 ジオイド高（全球） |
+| `"EPSG:5773"` | EGM96 ジオイド高（全球） |
+| `"EPSG:5703"` | NAVD88 height（北米） |
+| `"EPSG:6695"` | JGD2011 vertical height（日本） |
+| `"EPSG:105604"` | JGD2024 vertical height（日本） |
+| `"EPSG:5782"` | Alicante height（スペイン） |
 
-> **注記**: 国土地理院は令和7年（2025年）4月1日に全国の標高成果を改定し、ジオイド・モデルを「日本のジオイド2011」から「ジオイド2024」へ移行した（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。これにより同一地点でも従来の標高値と最大数十cm程度の差が生じうる。タイルデータが依拠する標高基準面を `verticalCrs` で明示することが重要である。JGD2024 の鉛直座標系には `EPSG:105604`（JGD2024_vertical_height）が割り当てられているが、2025年12月時点では EPSG への正式登録が未完了である（参照: [JGD2024の座標系コード](https://www.wingfield.gr.jp/archives/5692)）。正式登録後にコードが変更される可能性がある点に留意されたい。
+> **注記**: 鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なる。タイルデータが依拠する鉛直基準面を `verticalCrs` で明示することで、異なるデータセット間の整合性を確保できる。例えば、日本では2025年4月にJGD2011からJGD2024へジオイド・モデルが移行され、同一地点で最大数十cm程度の差が生じうる（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)、[JGD2024の座標系コード](https://www.wingfield.gr.jp/archives/5692)）。なお、`EPSG:105604` は2025年12月時点でEPSGへの正式登録が未完了であり、コードが変更される可能性がある。
 
 ```json
 {
