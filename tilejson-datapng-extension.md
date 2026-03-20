@@ -33,6 +33,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
 | 全国の標高成果の改定 | https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html |
+| JGD2024の座標系コード | https://www.wingfield.gr.jp/archives/5692 |
 
 ---
 
@@ -202,11 +203,12 @@ v = factor × rawValue + offset
 
 | 値 | 意味 |
 |----|------|
-| `"EPSG:6695"` | 東京湾平均海面（JGD2011 height） |
+| `"EPSG:6695"` | 東京湾平均海面（JGD2011 vertical height） |
+| `"EPSG:105604"` | 東京湾平均海面（JGD2024 vertical height） |
 | `"EPSG:3855"` | EGM2008 ジオイド高 |
 | `"EPSG:5773"` | EGM96 ジオイド高 |
 
-> **注記**: 国土地理院は令和7年（2025年）4月1日に全国の標高成果を改定し、ジオイド・モデルを「日本のジオイド2011」から「ジオイド2024」へ移行した（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。これにより同一地点でも従来の標高値と最大数十cm程度の差が生じうる。タイルデータが依拠する標高基準面を `verticalCrs` で明示することが重要である。JGD2024 に対応する EPSG コードが付与された場合は、本仕様の指定例に追加する。
+> **注記**: 国土地理院は令和7年（2025年）4月1日に全国の標高成果を改定し、ジオイド・モデルを「日本のジオイド2011」から「ジオイド2024」へ移行した（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。これにより同一地点でも従来の標高値と最大数十cm程度の差が生じうる。タイルデータが依拠する標高基準面を `verticalCrs` で明示することが重要である。JGD2024 の鉛直座標系には `EPSG:105604`（JGD2024_vertical_height）が割り当てられているが、2025年12月時点では EPSG への正式登録が未完了である（参照: [JGD2024の座標系コード](https://www.wingfield.gr.jp/archives/5692)）。正式登録後にコードが変更される可能性がある点に留意されたい。
 
 ```json
 {
@@ -509,7 +511,7 @@ v = factor × rawValue + offset
 - **外部エンコーディング互換**: Mapbox Terrain-RGB 等への `encoding` 値の追加
 - **タイルサイズ**: 256px / 512px の明示的記述
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
-- **JGD2024 対応**: 測地成果2024に対応する EPSG コードが確定次第、`verticalCrs` の指定例に追加
+- **JGD2024 対応**: `EPSG:105604` の EPSG 正式登録を確認次第、コード確定を反映
 
 ---
 
