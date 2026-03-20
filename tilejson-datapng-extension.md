@@ -1,8 +1,10 @@
 # TileJSON DataPNG Extension (Draft)
 
-**バージョン: 0.2.0 (2026-03-20)**
+**バージョン: 0.3.0 (2026-03-20)**
 
 産総研データPNG仕様に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
+
+> **規範語の定義**: 本仕様において MUST / MUST NOT / SHOULD / MAY は [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) に従う。
 
 ---
 
@@ -30,10 +32,14 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | 仕様 | URL |
 |------|-----|
 | TileJSON 3.0.0 | https://github.com/mapbox/tilejson-spec/tree/master/3.0.0 |
+| RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
 | 全国の標高成果の改定 | https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html |
-| JGD2024の座標系コード | https://www.wingfield.gr.jp/archives/5692 |
+
+### 1.4 バージョニング
+
+本仕様は [Semantic Versioning 2.0.0](https://semver.org/) に従う。0.x.y の間は後方互換性を保証しない。1.0.0 への移行は、複数の独立した実装による相互運用性の確認をもって行う。`datapng` オブジェクト内にバージョン番号フィールドは設けない。仕様バージョンは TileJSON を配信するシステム側で管理する。
 
 ---
 
@@ -53,6 +59,10 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
   }
 }
 ```
+
+クライアントは `datapng` オブジェクト内の未知のキーを無視しなければならない（MUST）。
+
+`datapng.type` に対して該当しないフィールド（例: `type: "palette"` 時の `factor`・`offset`）が含まれていた場合、クライアントはそれらを無視しなければならない（MUST）。
 
 ---
 
@@ -84,7 +94,7 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
 | `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset` |
 | `offset` | Number | OPTIONAL | `0` | オフセット *o* |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
-| `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色 |
+| `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
 
 変換式:
 
@@ -94,7 +104,17 @@ rawValue = r' × 65536 + g × 256 + b
 v = factor × rawValue + offset
 ```
 
-> **補足**: 完全に透明なピクセル（不透明度 0）は常に無効値として扱う。`invalidColor` は透明ピクセルとは別に、不透明だが無効とみなすべき色を指定するもの（例: 国土地理院標高タイルの `[128, 0, 0]`）。
+`rawValue` は24ビット符号付き整数の全域（-8,388,608 〜 8,388,607）を取りうる。実装は少なくとも32ビット整数型で保持しなければならない（MUST）。
+
+#### 無効値の判定
+
+クライアントは以下の順序で無効値判定を行わなければならない（MUST）:
+
+1. **透明度チェック**: アルファ値が 0 のピクセルは無効値とする。半透明ピクセル（0 < A < 255）は有効として扱う。
+2. **invalidColor チェック**: `invalidColor` が指定されている場合、ピクセルの RGB 値が `invalidColor` と完全一致するかを判定する。アルファ値は考慮しない。一致した場合は無効値とする。
+3. 上記いずれにも該当しないピクセルに対してのみ、変換式を適用する。
+
+> **補足**: `invalidColor` は1色のみ指定可能とする。これは本バージョンにおける意図的な制約であり、既知のデータPNG仕様では無効色は1色で十分であるため。複数の無効色が必要なユースケースが判明した場合は、将来バージョンで `Array of Array[3]` への拡張を検討する。
 
 **例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
@@ -103,7 +123,6 @@ v = factor × rawValue + offset
   "datapng": {
     "type": "numerical",
     "factor": 0.01,
-    "offset": 0,
     "unit": "m",
     "invalidColor": [128, 0, 0]
   }
@@ -116,7 +135,7 @@ v = factor × rawValue + offset
 
 | キー | 型 | 必須 | 説明 |
 |------|----|------|------|
-| `legend` | Object or String | OPTIONAL | 凡例情報（インラインまたはURL参照） |
+| `legend` | Object or String | **REQUIRED** | 凡例情報（インラインまたはURL参照） |
 
 #### 3.3.1 凡例のインライン定義
 
@@ -140,6 +159,8 @@ v = factor × rawValue + offset
 | `description` | String | OPTIONAL | 凡例項目の詳細な説明文。プレーンテキストまたはHTMLフラグメント。注釈、出典、適用条件等の補足情報を記載できる |
 
 > **仕様上の拡張性**: 産総研JSON凡例フォーマットに従い、凡例項目オブジェクトに上記以外の任意のメンバーを追加することができる。クライアントは処理できないメンバーを無視しなければならない（MUST）。これにより、シンボル画像URL、数値範囲、表示順序等をアプリケーション固有に追加できる。
+
+凡例によるカラーマッチングは、ピクセルの RGB 値と凡例項目の `(r, g, b)` の**完全一致**で行う（MUST）。一致する凡例項目がない場合の描画はクライアント実装依存とする。
 
 ```json
 {
@@ -180,7 +201,7 @@ v = factor × rawValue + offset
 
 #### 3.3.2 凡例の外部参照
 
-凡例データが大きい場合はURLで参照する。`legend` の値が文字列の場合、クライアントはそのURLから JSON凡例フォーマットを取得する。
+凡例データが大きい場合はURLで参照する。`legend` の値が文字列の場合、クライアントはそのURLから JSON凡例フォーマットを取得する（MUST）。フェッチが失敗した場合（HTTPエラー・タイムアウト・CORSエラー等）、クライアントはタイルを PNG 画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。リトライポリシーはクライアント実装依存とする。
 
 ```json
 {
@@ -212,7 +233,7 @@ v = factor × rawValue + offset
 | `"EPSG:105604"` | JGD2024 vertical height（日本） |
 | `"EPSG:5782"` | Alicante height（スペイン） |
 
-> **注記**: 鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なる。タイルデータが依拠する鉛直基準面を `verticalCrs` で明示することで、異なるデータセット間の整合性を確保できる。例えば、日本では2025年4月にJGD2011からJGD2024へジオイド・モデルが移行され、同一地点で最大数十cm程度の差が生じうる（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)、[JGD2024の座標系コード](https://www.wingfield.gr.jp/archives/5692)）。なお、`EPSG:105604` は2025年12月時点でEPSGへの正式登録が未完了であり、コードが変更される可能性がある。
+> **注記**: 鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なる。タイルデータが依拠する鉛直基準面を `verticalCrs` で明示することで、異なるデータセット間の整合性を確保できる。例えば、日本では2025年4月にJGD2011からJGD2024へジオイド・モデルが移行され、同一地点で最大数十cm程度の差が生じうる（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。なお、`EPSG:105604` は2025年12月時点でEPSGへの正式登録が未完了であり、コードが変更される可能性がある。
 
 ```json
 {
@@ -227,12 +248,12 @@ v = factor × rawValue + offset
 
 ### 3.5 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
 
-ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用された（または推奨される）かを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` がズームレベル間の値の導出方法を示す。
+ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` がズームレベル間の値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `pixelMapping` | String (enum) | OPTIONAL | `"area"` | ピクセルの値が地理空間上のどの位置・範囲を表すか |
-| `resampling` | String (enum) | OPTIONAL | — | リサンプリングアルゴリズム |
+| `pixelMapping` | String (enum) | OPTIONAL | `"northwest"` | ピクセルの値が地理空間上のどの位置・範囲を表すか |
+| `resampling` | String (enum) | OPTIONAL | — | タイル生成時に使用されたリサンプリングアルゴリズム |
 
 **`pixelMapping` の指定可能な値:**
 
@@ -255,6 +276,8 @@ v = factor × rawValue + offset
 ---
 
 ## 4. 完全な TileJSON 例
+
+> **注記**: TileJSON の `tiles` フィールドはURLテンプレートであり、`{z}`・`{x}`・`{y}` の出現順序はサーバーのURL構造に依存する。`{z}/{y}/{x}` と `{z}/{x}/{y}` のどちらも有効である。
 
 ### 4.1 産総研シームレス標高タイル（統合DEM）
 
@@ -363,16 +386,41 @@ v = factor × rawValue + offset
 }
 ```
 
+### 4.5 Copernicus DEM GLO-30（全球標高データ）
+
+```json
+{
+  "tilejson": "3.0.0",
+  "name": "Copernicus DEM GLO-30",
+  "description": "Copernicus Digital Elevation Model at 30m resolution. Global coverage.",
+  "attribution": "© ESA Copernicus",
+  "tiles": [
+    "https://example.org/copernicus-dem-glo30/{z}/{x}/{y}.png"
+  ],
+  "minzoom": 0,
+  "maxzoom": 12,
+
+  "datapng": {
+    "type": "numerical",
+    "factor": 0.01,
+    "unit": "m",
+    "verticalCrs": "EPSG:3855"
+  }
+}
+```
+
 ---
 
 ## 5. JSON Schema
 
 以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。
 
+> **注記**: `$id` はドラフト段階のプレースホルダーであり、正式公開時に実際のホスティングURLへ変更する。
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/tilejson-datapng-extension/0.2.0/schema.json",
+  "$id": "https://example.org/tilejson-datapng-extension/0.3.0/schema.json",
   "title": "TileJSON DataPNG Extension",
   "description": "産総研データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
   "type": "object",
@@ -442,23 +490,35 @@ v = factor × rawValue + offset
     "pixelMapping": {
       "type": "string",
       "enum": ["northwest", "center", "area"],
-      "default": "area",
+      "default": "northwest",
       "description": "ピクセル値と地理座標の対応方法"
     },
     "resampling": {
       "type": "string",
       "enum": ["nearest", "northwest", "average", "majority", "bilinear"],
-      "description": "タイル作成時のリサンプリング手法"
+      "description": "タイル生成時に使用されたリサンプリング手法"
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "type": { "const": "numerical" } } },
+      "if": {
+        "required": ["type"],
+        "properties": { "type": { "const": "numerical" } }
+      },
       "then": {
         "properties": {
           "factor":   { "default": 1 },
           "offset":   { "default": 0 }
         }
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": { "type": { "const": "palette" } }
+      },
+      "then": {
+        "required": ["type", "legend"]
       }
     }
   ]
@@ -474,13 +534,13 @@ v = factor × rawValue + offset
 1. TileJSON をパースし、`datapng` キーの有無を確認する。
 2. `datapng` が存在しない場合、通常のラスタータイルとして扱う。
 3. `datapng.type` に応じたデコーダを選択する。
-4. 数値PNGの場合、`factor`・`offset`・`invalidColor` を用いて値変換を行う。
-5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って凡例検索を行う。
+4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して `factor`・`offset` による値変換を行う。
+5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って RGB 完全一致による凡例検索を行う。
 
 ### 6.2 後方互換性
 
 - `datapng` を認識しないクライアントはこのキーを無視する（TileJSON 3.0.0 §1 に準拠）。
-- タイル画像自体は有効な PNG/WebP であるため、画像としての表示は引き続き可能。
+- タイル画像自体は有効な PNG であるため、画像としての表示は引き続き可能。
 
 ### 6.3 凡例項目の拡張性
 
@@ -497,9 +557,9 @@ v = factor × rawValue + offset
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
 | `invalidColor` | [r,g,b] | ○ | — | — |
-| `legend` | Obj/URL | — | ○ | — |
+| `legend` | Obj/URL | — | ✔ | — |
 | `verticalCrs` | String | ○ | — | — |
-| `pixelMapping` | String | ○ | ○ | `"area"` |
+| `pixelMapping` | String | ○ | ○ | `"northwest"` |
 | `resampling` | String | ○ | ○ | — |
 
 ✔ = 必須、○ = 任意、— = 該当なし
@@ -514,9 +574,10 @@ v = factor × rawValue + offset
 - **タイルサイズ**: 256px / 512px の明示的記述
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
 - **JGD2024 対応**: `EPSG:105604` の EPSG 正式登録を確認次第、コード確定を反映
+- **`invalidColor` の複数色対応**: 複数の無効色が必要なユースケースが判明した場合、`Array of Array[3]` への拡張を検討
 
 ---
 
 ## ライセンス
 
-本仕様案は CC BY 4.0 で公開する。
+本仕様案は CC BY 4.0 で公開する。本仕様に準拠したソフトウェアの実装・配布にあたって、本仕様の著作権者へのクレジット表示は不要である。
