@@ -97,6 +97,7 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
 | `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
 | `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
+| `precision` | Number | OPTIONAL | — | データの精度（信頼できる最小単位）。`factor` はエンコーディングの分解能であり、`precision` は元データの測定精度を示す |
 
 変換式:
 
@@ -127,7 +128,8 @@ v = factor × rawValue + offset
     "factor": 0.01,
     "unit": "m",
     "invalidColor": [128, 0, 0],
-    "dataRange": { "min": -500, "max": 9000 }
+    "dataRange": { "min": -500, "max": 9000 },
+    "precision": 1
   }
 }
 ```
@@ -333,7 +335,8 @@ v = factor × rawValue + offset
     "verticalCrs": "EPSG:6695",
     "pixelMapping": "area",
     "resampling": "average",
-    "dataRange": { "min": -500, "max": 9000 }
+    "dataRange": { "min": -500, "max": 9000 },
+    "precision": 0.3
   }
 }
 ```
@@ -464,6 +467,11 @@ v = factor × rawValue + offset
       },
       "description": "デコード後の値の期待範囲"
     },
+    "precision": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "データの精度（信頼できる最小単位）"
+    },
     "legend": {
       "oneOf": [
         {
@@ -572,6 +580,7 @@ v = factor × rawValue + offset
 | `unit` | String | ○ | — | — |
 | `invalidColor` | [r,g,b] | ○ | — | — |
 | `dataRange` | Object | ○ | — | — |
+| `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
 | `verticalCrs` | String | ○ | — | — |
 | `pixelMapping` | String | ○ | ○ | `"northwest"` |
