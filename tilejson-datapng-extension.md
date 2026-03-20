@@ -15,7 +15,6 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 - TileJSON 3.0.0 との**後方互換性**を維持する（未知キーとして無視可能）。
 - 産総研データPNG仕様（グリッドPNGタイル仕様 v0.1）に準拠する。
 - 本バージョンでは**グリッドPNG**（数値PNG・パレットPNG）を対象とする。
-- 水平座標系は Webメルカトル（EPSG:3857）を前提とし、規定しない。
 - 測量年次・データソース等の自由記載は TileJSON 既存の `description` フィールドを使用する。
 
 ### 1.2 対象外（将来拡張）
@@ -25,10 +24,6 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 - 点群PNG（Point Cloud PNG）
 - ベクトル型グリッドPNG（24ビット分割による多チャネル表現）
 - Mapbox Terrain-RGB 等の外部エンコーディング互換
-- WebP 形式固有の記述
-- 257px タイル（隣接タイル重なり）の記述
-- 水平座標参照系の明示的指定
-
 ### 1.3 参照仕様
 
 | 仕様 | URL |
@@ -36,6 +31,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | TileJSON 3.0.0 | https://github.com/mapbox/tilejson-spec/tree/master/3.0.0 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
+| 全国の標高成果の改定 | https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html |
 
 ---
 
@@ -79,6 +75,8 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
 
 ### 3.2 `datapng.encoding` — ピクセルエンコーディング
 
+> **本フィールドの必要性**: `type` からデフォルトのエンコーディングが決まるため、多くの場合は省略可能。ただし、パレットPNGで RGB値をそのまま色として使用する場合（`"rgb"`）など、デフォルトと異なるデコード方式をクライアントに明示する必要がある場合に使用する。また、将来の `encoding` 値追加（例: Mapbox Terrain-RGB 互換）への拡張点としても機能する。
+
 | キー | 型 | 必須 | 説明 |
 |------|----|------|------|
 | `encoding` | String (enum) | OPTIONAL | RGB→整数変換のエンコーディング方式 |
@@ -116,7 +114,7 @@ v = factor × rawValue + offset
 
 > **補足**: 完全に透明なピクセル（不透明度 0）は常に無効値として扱う。`invalidColor` は透明ピクセルとは別に、不透明だが無効とみなすべき色を指定するもの（例: 国土地理院標高タイルの `[128, 0, 0]`）。
 
-**例: 国土地理院標高タイル（cm精度 → m）**
+**例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
 ```json
 {
@@ -157,7 +155,6 @@ v = factor × rawValue + offset
 | `g` | Integer (0–255) | **REQUIRED** | 色の G 値 |
 | `b` | Integer (0–255) | **REQUIRED** | 色の B 値 |
 | `title` | String | **REQUIRED** | 凡例項目の短いタイトル |
-| `value` | String | OPTIONAL | ピクセル値の16進数表現（6桁、例: `"A50021"`） |
 | `description` | String | OPTIONAL | 凡例項目の詳細な説明文。プレーンテキストまたはHTMLフラグメント。注釈、出典、適用条件等の補足情報を記載できる |
 
 > **仕様上の拡張性**: 産総研JSON凡例フォーマットに従い、凡例項目オブジェクトに上記以外の任意のメンバーを追加することができる。クライアントは処理できないメンバーを無視しなければならない（MUST）。これにより、シンボル画像URL、数値範囲、表示順序等をアプリケーション固有に追加できる。
@@ -172,30 +169,25 @@ v = factor × rawValue + offset
         {
           "r": 245, "g": 245, "b": 50,
           "title": "0.5m未満",
-          "value": "F5F532",
           "description": "床下浸水相当。避難行動は徒歩で可能。"
         },
         {
           "r": 255, "g": 216, "b": 0,
           "title": "0.5～3.0m",
-          "value": "FFD800",
           "description": "1階床上浸水～1階水没相当。水平避難が必要。"
         },
         {
           "r": 255, "g": 153, "b": 0,
           "title": "3.0～5.0m",
-          "value": "FF9900",
           "description": "2階水没相当。垂直避難では不十分な場合がある。"
         },
         {
           "r": 255, "g": 40, "b": 0,
-          "title": "5.0～10.0m",
-          "value": "FF2800"
+          "title": "5.0～10.0m"
         },
         {
           "r": 165, "g": 0, "b": 33,
           "title": "10.0～20.0m",
-          "value": "A50021",
           "description": "3階以上の建物も水没する深さ。該当地域では早期の広域避難が不可欠。"
         }
       ]
@@ -233,6 +225,8 @@ v = factor × rawValue + offset
 | `"EPSG:3855"` | EGM2008 ジオイド高 |
 | `"EPSG:5773"` | EGM96 ジオイド高 |
 
+> **注記**: 国土地理院は令和7年（2025年）4月1日に全国の標高成果を改定し、ジオイド・モデルを「日本のジオイド2011」から「ジオイド2024」へ移行した（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。これにより同一地点でも従来の標高値と最大数十cm程度の差が生じうる。タイルデータが依拠する標高基準面を `verticalCrs` で明示することが重要である。JGD2024 に対応する EPSG コードが付与された場合は、本仕様の指定例に追加する。
+
 ```json
 {
   "datapng": {
@@ -244,13 +238,16 @@ v = factor × rawValue + offset
 }
 ```
 
-### 3.6 `datapng.pixelMapping` — ピクセルと地理座標の対応
+### 3.6 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
+
+ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用された（または推奨される）かを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` がズームレベル間の値の導出方法を示す。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
 | `pixelMapping` | String (enum) | OPTIONAL | `"area"` | ピクセルの値が地理空間上のどの位置・範囲を表すか |
+| `resampling` | String (enum) | OPTIONAL | — | リサンプリングアルゴリズム |
 
-指定可能な値:
+**`pixelMapping` の指定可能な値:**
 
 | 値 | 説明 | 典型的な用途 |
 |----|------|-------------|
@@ -258,15 +255,7 @@ v = factor × rawValue + offset
 | `"center"` | ピクセル中央点の値を表す | 一般的な格子データ |
 | `"area"` | ピクセル範囲全体の代表値（面積型） | 国土地理院標高タイル、地質図 |
 
-### 3.7 `datapng.resampling` — リサンプリング方法
-
-タイル作成時に使用された（または推奨される）リサンプリングアルゴリズムを示す。
-
-| キー | 型 | 必須 | デフォルト | 説明 |
-|------|----|------|-----------|------|
-| `resampling` | String (enum) | OPTIONAL | — | リサンプリングアルゴリズム |
-
-指定可能な値:
+**`resampling` の指定可能な値:**
 
 | 値 | 説明 | 適用例 |
 |----|------|--------|
@@ -356,11 +345,11 @@ v = factor × rawValue + offset
     "legend": {
       "title": "浸水深",
       "items": [
-        { "r": 245, "g": 245, "b": 50, "title": "0.5m未満",    "value": "F5F532" },
-        { "r": 255, "g": 216, "b":  0, "title": "0.5～3.0m",   "value": "FFD800" },
-        { "r": 255, "g": 153, "b":  0, "title": "3.0～5.0m",   "value": "FF9900" },
-        { "r": 255, "g":  40, "b":  0, "title": "5.0～10.0m",  "value": "FF2800" },
-        { "r": 165, "g":   0, "b": 33, "title": "10.0～20.0m", "value": "A50021" }
+        { "r": 245, "g": 245, "b": 50, "title": "0.5m未満"    },
+        { "r": 255, "g": 216, "b":  0, "title": "0.5～3.0m"   },
+        { "r": 255, "g": 153, "b":  0, "title": "3.0～5.0m"   },
+        { "r": 255, "g":  40, "b":  0, "title": "5.0～10.0m"  },
+        { "r": 165, "g":   0, "b": 33, "title": "10.0～20.0m" }
       ]
     },
     "resampling": "nearest"
@@ -456,7 +445,6 @@ v = factor × rawValue + offset
                   "g":           { "type": "integer", "minimum": 0, "maximum": 255 },
                   "b":           { "type": "integer", "minimum": 0, "maximum": 255 },
                   "title":       { "type": "string" },
-                  "value":       { "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" },
                   "description": { "type": "string" }
                 },
                 "additionalProperties": true
@@ -554,11 +542,9 @@ v = factor × rawValue + offset
 - **点群PNG（Point Cloud PNG）** の対応: `type: "pointcloud"` 追加およびカラム定義スキーマ
 - **ベクトル型グリッドPNG**: 24ビットを分割して複数チャネルを持つ場合のスキーマ定義
 - **外部エンコーディング互換**: Mapbox Terrain-RGB 等への `encoding` 値の追加
-- **WebP 形式固有の記述**: ファイル形式の明示（VersaTiles `tile_format` との統合を含む）
 - **タイルサイズ**: 256px / 512px の明示的記述
-- **257px タイル**: シームレス標高タイル v1.1.0 で追加された隣接タイル重なりの記述方法
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
-- **水平座標参照系の明示**: Webメルカトル以外の投影法（正距円筒図法等）を使用する場合の記述
+- **JGD2024 対応**: 測地成果2024に対応する EPSG コードが確定次第、`verticalCrs` の指定例に追加
 
 ---
 
