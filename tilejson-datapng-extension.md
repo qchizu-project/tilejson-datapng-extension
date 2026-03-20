@@ -268,7 +268,7 @@ v = factor × rawValue + offset
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `pixelMapping` | String (enum) | OPTIONAL | `"northwest"` | ピクセルの値が地理空間上のどの位置・範囲を表すか |
+| `pixelMapping` | String (enum) | OPTIONAL | — | ピクセルの値が地理空間上のどの位置・範囲を表すか。省略時の解釈はクライアント実装依存 |
 | `resampling` | String (enum) | OPTIONAL | — | タイル生成時に使用されたリサンプリングアルゴリズム |
 
 **`pixelMapping` の指定可能な値:**
@@ -523,7 +523,6 @@ v = factor × rawValue + offset
     "pixelMapping": {
       "type": "string",
       "enum": ["northwest", "center", "area"],
-      "default": "northwest",
       "description": "ピクセル値と地理座標の対応方法"
     },
     "resampling": {
@@ -594,7 +593,7 @@ v = factor × rawValue + offset
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
 | `verticalCrs` | String | ○ | — | — |
-| `pixelMapping` | String | ○ | ○ | `"northwest"` |
+| `pixelMapping` | String | ○ | ○ | — |
 | `resampling` | String | ○ | ○ | — |
 
 ✔ = 必須、○ = 任意、— = 該当なし
