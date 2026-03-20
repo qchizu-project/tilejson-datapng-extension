@@ -35,6 +35,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
+| Data Tile Schema Specification | (Geolonia Inc., Draft) |
 | 全国の標高成果の改定 | https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html |
 
 ### 1.4 バージョニング
@@ -95,6 +96,7 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
 | `offset` | Number | OPTIONAL | `0` | オフセット *o* |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
 | `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
+| `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
 
 変換式:
 
@@ -124,7 +126,8 @@ v = factor × rawValue + offset
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "invalidColor": [128, 0, 0]
+    "invalidColor": [128, 0, 0],
+    "dataRange": { "min": -500, "max": 9000 }
   }
 }
 ```
@@ -302,7 +305,8 @@ v = factor × rawValue + offset
     "unit": "m",
     "verticalCrs": "EPSG:6695",
     "pixelMapping": "northwest",
-    "resampling": "northwest"
+    "resampling": "northwest",
+    "dataRange": { "min": -500, "max": 9000 }
   }
 }
 ```
@@ -328,7 +332,8 @@ v = factor × rawValue + offset
     "invalidColor": [128, 0, 0],
     "verticalCrs": "EPSG:6695",
     "pixelMapping": "area",
-    "resampling": "average"
+    "resampling": "average",
+    "dataRange": { "min": -500, "max": 9000 }
   }
 }
 ```
@@ -404,7 +409,8 @@ v = factor × rawValue + offset
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "verticalCrs": "EPSG:3855"
+    "verticalCrs": "EPSG:3855",
+    "dataRange": { "min": -500, "max": 9000 }
   }
 }
 ```
@@ -449,6 +455,14 @@ v = factor × rawValue + offset
       "minItems": 3,
       "maxItems": 3,
       "description": "追加無効色 [r, g, b]"
+    },
+    "dataRange": {
+      "type": "object",
+      "properties": {
+        "min": { "type": "number", "description": "デコード後の最小期待値" },
+        "max": { "type": "number", "description": "デコード後の最大期待値" }
+      },
+      "description": "デコード後の値の期待範囲"
     },
     "legend": {
       "oneOf": [
@@ -557,6 +571,7 @@ v = factor × rawValue + offset
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
 | `invalidColor` | [r,g,b] | ○ | — | — |
+| `dataRange` | Object | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
 | `verticalCrs` | String | ○ | — | — |
 | `pixelMapping` | String | ○ | ○ | `"northwest"` |
