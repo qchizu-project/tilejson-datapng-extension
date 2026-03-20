@@ -24,6 +24,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 - 点群PNG（Point Cloud PNG）
 - ベクトル型グリッドPNG（24ビット分割による多チャネル表現）
 - Mapbox Terrain-RGB 等の外部エンコーディング互換
+
 ### 1.3 参照仕様
 
 | 仕様 | URL |
@@ -73,27 +74,7 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
 { "datapng": { "type": "numerical" } }
 ```
 
-### 3.2 `datapng.encoding` — ピクセルエンコーディング
-
-> **本フィールドの必要性**: `type` からデフォルトのエンコーディングが決まるため、多くの場合は省略可能。ただし、パレットPNGで RGB値をそのまま色として使用する場合（`"rgb"`）など、デフォルトと異なるデコード方式をクライアントに明示する必要がある場合に使用する。また、将来の `encoding` 値追加（例: Mapbox Terrain-RGB 互換）への拡張点としても機能する。
-
-| キー | 型 | 必須 | 説明 |
-|------|----|------|------|
-| `encoding` | String (enum) | OPTIONAL | RGB→整数変換のエンコーディング方式 |
-
-指定可能な値:
-
-| 値 | 意味 | 適用対象 |
-|----|------|----------|
-| `"int24s"` | 24ビット符号付き整数（r' を符号拡張後、r'×2¹⁶ + g×2⁸ + b） | 数値PNG |
-| `"uint24"` | 24ビット符号無し整数（r×2¹⁶ + g×2⁸ + b） | パレットPNG |
-| `"rgb"` | RGB値をそのまま色として利用 | パレットPNG |
-
-省略時は `type` に応じたデフォルトが適用される:
-- `"numerical"` → `"int24s"`
-- `"palette"` → `"uint24"`
-
-### 3.3 数値PNG用フィールド
+### 3.2 数値PNG用フィールド
 
 `type` が `"numerical"` の場合に使用するフィールド群。
 
@@ -128,7 +109,7 @@ v = factor × rawValue + offset
 }
 ```
 
-### 3.4 パレットPNG用フィールド
+### 3.3 パレットPNG用フィールド
 
 `type` が `"palette"` の場合に使用するフィールド群。
 
@@ -136,7 +117,7 @@ v = factor × rawValue + offset
 |------|----|------|------|
 | `legend` | Object or String | OPTIONAL | 凡例情報（インラインまたはURL参照） |
 
-#### 3.4.1 凡例のインライン定義
+#### 3.3.1 凡例のインライン定義
 
 産総研 JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
@@ -196,7 +177,7 @@ v = factor × rawValue + offset
 }
 ```
 
-#### 3.4.2 凡例の外部参照
+#### 3.3.2 凡例の外部参照
 
 凡例データが大きい場合はURLで参照する。`legend` の値が文字列の場合、クライアントはそのURLから JSON凡例フォーマットを取得する。
 
@@ -209,7 +190,7 @@ v = factor × rawValue + offset
 }
 ```
 
-### 3.5 `datapng.verticalCrs` — 鉛直座標参照系
+### 3.4 `datapng.verticalCrs` — 鉛直座標参照系
 
 標高タイル等、値が鉛直方向の物理量を表す場合に、その基準面を示す。
 
@@ -238,7 +219,7 @@ v = factor × rawValue + offset
 }
 ```
 
-### 3.6 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
+### 3.5 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
 
 ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用された（または推奨される）かを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` がズームレベル間の値の導出方法を示す。
 
@@ -288,7 +269,6 @@ v = factor × rawValue + offset
 
   "datapng": {
     "type": "numerical",
-    "encoding": "int24s",
     "factor": 0.01,
     "offset": 0,
     "unit": "m",
@@ -399,11 +379,6 @@ v = factor × rawValue + offset
       "enum": ["numerical", "palette"],
       "description": "データPNGの種別"
     },
-    "encoding": {
-      "type": "string",
-      "enum": ["int24s", "uint24", "rgb"],
-      "description": "ピクセルRGB→整数の変換方式"
-    },
     "factor": {
       "type": "number",
       "description": "数値PNG用の変換係数 f"
@@ -478,16 +453,7 @@ v = factor × rawValue + offset
       "then": {
         "properties": {
           "factor":   { "default": 1 },
-          "offset":   { "default": 0 },
-          "encoding": { "default": "int24s" }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "type": { "const": "palette" } } },
-      "then": {
-        "properties": {
-          "encoding": { "default": "uint24" }
+          "offset":   { "default": 0 }
         }
       }
     }
@@ -523,7 +489,6 @@ v = factor × rawValue + offset
 | フィールド | 型 | 数値PNG | パレットPNG | デフォルト |
 |-----------|-----|:-------:|:-----------:|-----------|
 | `type` | String | ✔ | ✔ | — (必須) |
-| `encoding` | String | ○ | ○ | type依存 |
 | `factor` | Number | ○ | — | `1` |
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
