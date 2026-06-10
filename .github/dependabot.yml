@@ -1,0 +1,24 @@
+# Dependabot version updates — github-actions のみ
+# ワークフローはあるが npm/pip/docker 等のパッケージマニフェストを持たないリポジトリ向け。
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  # GitHub Actions（ワークフローで使うサードパーティアクション）
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional Commits 形式（プレフィックス英語）
+      prefix: ci
+      include: scope
+    groups:
+      # マイナー・パッチはまとめて1PRに集約しノイズを抑える
+      actions:
+        update-types:
+          - minor
+          - patch
