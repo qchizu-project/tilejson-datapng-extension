@@ -1,8 +1,8 @@
 # TileJSON DataPNG Extension (Draft)
 
-**バージョン: 0.3.0 (2026-03-20)**
+**バージョン: 0.4.0 (2026-06-11)**
 
-産総研データPNG仕様に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
+データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
 
 > **規範語の定義**: 本仕様において MUST / MUST NOT / SHOULD / MAY は [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) に従う。
 
@@ -10,14 +10,14 @@
 
 ## 1. 概要
 
-TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが、産総研が策定した **データPNG**（数値PNG・パレットPNG）をタイルとして配信する場合に必要な属性情報を記述する手段を持たない。本拡張は、TileJSON の仕様（未知キーを無視する）を利用し、`datapng` キーを追加することでクライアントがタイルのデコード・描画に必要な情報を事前に取得できるようにする。
+TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが、**データPNG**（数値PNG・パレットPNG）をタイルとして配信する場合に必要な属性情報を記述する手段を持たない。本拡張は、TileJSON の仕様（未知キーを無視する）を利用し、`datapng` キーを追加することでクライアントがタイルのデコード・描画に必要な情報を事前に取得できるようにする。
 
 ### 1.1 設計方針
 
 - TileJSON 3.0.0 との**後方互換性**を維持する（未知キーとして無視可能）。
-- 産総研データPNG仕様（グリッドPNGタイル仕様 v0.1）に準拠する。
+- データPNG仕様（グリッドPNGタイル仕様 v0.1）に準拠する。
 - 本バージョンでは**グリッドPNG**（数値PNG・パレットPNG）を対象とする。
-- 測量年次・データソース等の自由記載は TileJSON 既存の `description` フィールドを使用する。
+- 測量年次・データソース・鉛直基準面（測地系）等の自由記載は TileJSON 既存の `description` フィールドを使用する。
 
 ### 1.2 対象外（将来拡張）
 
@@ -35,8 +35,6 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
-| Data Tile Schema Specification | (Geolonia Inc., Draft) |
-| 全国の標高成果の改定 | https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html |
 
 ### 1.4 バージョニング
 
@@ -90,8 +88,8 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 
 | 値 | 意味 |
 |----|------|
-| `"numerical"` | 数値PNG（連続値スカラー型） |
-| `"palette"` | パレットPNG（離散色凡例型） |
+| `"numerical"` | 数値PNG（Numerical PNG） |
+| `"palette"` | パレットPNG（Palette PNG） |
 
 ```json
 { "datapng": { "type": "numerical" } }
@@ -128,7 +126,7 @@ v = factor × rawValue + offset
 2. **invalidColor チェック**: `invalidColor` が指定されている場合、ピクセルの RGB 値が `invalidColor` と完全一致するかを判定する。アルファ値は考慮しない。一致した場合は無効値とする。
 3. 上記いずれにも該当しないピクセルに対してのみ、変換式を適用する。
 
-> **補足**: `invalidColor` は1色のみ指定可能とする。これは本バージョンにおける意図的な制約であり、既知のデータPNG仕様では無効色は1色で十分であるため。複数の無効色が必要なユースケースが判明した場合は、将来バージョンで `Array of Array[3]` への拡張を検討する。
+> **補足**: `invalidColor` は1色のみ指定可能とする。複数の無効色が必要なユースケースが判明した場合は、将来バージョンで `Array of Array[3]` への拡張を検討する。
 
 **例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
@@ -155,7 +153,7 @@ v = factor × rawValue + offset
 
 #### 3.3.1 凡例のインライン定義
 
-産総研 JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
+JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 **凡例オブジェクト**のフィールド:
 
@@ -174,7 +172,7 @@ v = factor × rawValue + offset
 | `title` | String | **REQUIRED** | 凡例項目の短いタイトル |
 | `description` | String | OPTIONAL | 凡例項目の詳細な説明文。プレーンテキストまたはHTMLフラグメント。注釈、出典、適用条件等の補足情報を記載できる |
 
-> **仕様上の拡張性**: 産総研JSON凡例フォーマットに従い、凡例項目オブジェクトに上記以外の任意のメンバーを追加することができる。クライアントは処理できないメンバーを無視しなければならない（MUST）。これにより、シンボル画像URL、数値範囲、表示順序等をアプリケーション固有に追加できる。
+> **仕様上の拡張性**: JSON凡例フォーマットに従い、凡例項目オブジェクトに上記以外の任意のメンバーを追加することができる。クライアントは処理できないメンバーを無視しなければならない（MUST）。これにより、シンボル画像URL、数値範囲、表示順序等をアプリケーション固有に追加できる。
 
 凡例によるカラーマッチングは、ピクセルの RGB 値と凡例項目の `(r, g, b)` の**完全一致**で行う（MUST）。一致する凡例項目がない場合の描画はクライアント実装依存とする。
 
@@ -228,72 +226,41 @@ v = factor × rawValue + offset
 }
 ```
 
-### 3.4 `datapng.verticalCrs` — 鉛直座標参照系
+> **鉛直基準面（測地系）について**: 標高タイル等、値が鉛直方向の物理量を表す場合の基準面（測地系・ジオイドモデル等）は、専用フィールドを設けず TileJSON 既存の `description` フィールドに自由記述する（§1.1）。鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なるため、データが依拠する基準面を `description` に明示することが望ましい。
 
-標高タイル等、値が鉛直方向の物理量を表す場合に、その基準面を示す。
+### 3.4 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
 
-| キー | 型 | 必須 | デフォルト | 説明 |
-|------|----|------|-----------|------|
-| `verticalCrs` | String | OPTIONAL | — | 鉛直座標参照系（EPSG コード形式を推奨） |
-
-値には EPSG コード形式（`"EPSG:NNNNN"`）を推奨する。各国・地域の鉛直基準面や全球ジオイドモデルに対応する EPSG コードを指定できる。
-
-主な指定例:
-
-| 値 | 意味 |
-|----|------|
-| `"EPSG:3855"` | EGM2008 ジオイド高（全球） |
-| `"EPSG:5773"` | EGM96 ジオイド高（全球） |
-| `"EPSG:5703"` | NAVD88 height（北米） |
-| `"EPSG:6695"` | JGD2011 vertical height（日本） |
-| `"EPSG:105604"` | JGD2024 vertical height（日本） |
-| `"EPSG:5782"` | Alicante height（スペイン） |
-
-> **注記**: 鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なる。タイルデータが依拠する鉛直基準面を `verticalCrs` で明示することで、異なるデータセット間の整合性を確保できる。例えば、日本では2025年4月にJGD2011からJGD2024へジオイド・モデルが移行され、同一地点で最大数十cm程度の差が生じうる（参照: [全国の標高成果の改定](https://www.gsi.go.jp/sokuchikijun/hyoko2024rev.html)）。なお、`EPSG:105604` は2025年12月時点でEPSGへの正式登録が未完了であり、コードが変更される可能性がある。
-
-```json
-{
-  "datapng": {
-    "type": "numerical",
-    "factor": 0.01,
-    "unit": "m",
-    "verticalCrs": "EPSG:6695"
-  }
-}
-```
-
-### 3.5 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
-
-ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` がズームレベル間の値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
+ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` が値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
 | `pixelMapping` | String (enum) | OPTIONAL | — | ピクセルの値が地理空間上のどの位置・範囲を表すか。省略時の解釈はクライアント実装依存 |
 | `resampling` | String (enum) | OPTIONAL | — | タイル生成時に使用されたリサンプリングアルゴリズム |
 
-**`pixelMapping` の指定可能な値:**
+**`pixelMapping` の指定可能な値（点型・領域型）:**
 
-| 値 | 説明 | 典型的な用途 |
-|----|------|-------------|
-| `"northwest"` | ピクセル北西端（左上）の点の値を表す | シームレス標高タイル |
-| `"center"` | ピクセル中央点の値を表す | 一般的な格子データ |
-| `"area"` | ピクセル範囲全体の代表値（面積型） | 国土地理院標高タイル、地質図 |
+| 種別 | 値 | 説明 |
+|------|----|------|
+| 点型 | `"northwest"` | ピクセル北西端（左上）の点の値を表す |
+| 点型 | `"center"` | ピクセル中央点の値を表す |
+| 領域型 | `"area"` | ピクセル範囲全体の代表値を表す（範囲内の平均・合計・カウント等） |
 
-**`resampling` の指定可能な値:**
+**`resampling` の指定可能な値（点系・領域系）:**
 
-| 値 | 説明 | 適用例 |
-|----|------|--------|
-| `"nearest"` | 最近隣法（Nearest Neighbor） | 一般的な数値PNG |
-| `"northwest"` | 左上法（4ピクセルのうち北西を採用） | シームレス標高タイル |
-| `"average"` | 平均値法 | 国土地理院標高タイル |
-| `"majority"` | 多数決法（面積最大のカテゴリを採用） | シームレス地質図 |
-| `"bilinear"` | 双線形補間 | 連続値の平滑化 |
+`pixelMapping` の種別に対応し、点型には点系（単一点の選択・補間）、領域型には領域系（範囲の集約）のアルゴリズムが用いられる。
+
+| 系統 | 値 | 説明 |
+|------|----|------|
+| 点系 | `"nearest"` | 最近隣法（Nearest Neighbor） |
+| 点系 | `"bilinear"` | 双線形補間 |
+| 領域系 | `"average"` | 平均値法 |
+| 領域系 | `"majority"` | 多数決法（面積最大のカテゴリを採用） |
+| 領域系 | `"max"` | 最大値法（例: 浸水深の安全側集約） |
+| 領域系 | `"min"` | 最小値法 |
 
 ---
 
 ## 4. 完全な TileJSON 例
-
-> **注記**: TileJSON の `tiles` フィールドはURLテンプレートであり、`{z}`・`{x}`・`{y}` の出現順序はサーバーのURL構造に依存する。`{z}/{y}/{x}` と `{z}/{x}/{y}` のどちらも有効である。
 
 ### 4.1 産総研シームレス標高タイル（統合DEM）
 
@@ -316,9 +283,8 @@ v = factor × rawValue + offset
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "verticalCrs": "EPSG:6695",
     "pixelMapping": "northwest",
-    "resampling": "northwest",
+    "resampling": "nearest",
     "dataRange": { "min": -500, "max": 9000 }
   }
 }
@@ -343,7 +309,6 @@ v = factor × rawValue + offset
     "factor": 0.01,
     "unit": "m",
     "invalidColor": [128, 0, 0],
-    "verticalCrs": "EPSG:6695",
     "pixelMapping": "area",
     "resampling": "average",
     "dataRange": { "min": -500, "max": 9000 },
@@ -411,7 +376,7 @@ v = factor × rawValue + offset
 {
   "tilejson": "3.0.0",
   "name": "Copernicus DEM GLO-30",
-  "description": "Copernicus Digital Elevation Model at 30m resolution. Global coverage.",
+  "description": "Copernicus Digital Elevation Model at 30m resolution. Global coverage. Vertical datum: EGM2008 geoid height.",
   "attribution": "© ESA Copernicus",
   "tiles": [
     "https://example.org/copernicus-dem-glo30/{z}/{x}/{y}.png"
@@ -423,7 +388,6 @@ v = factor × rawValue + offset
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "verticalCrs": "EPSG:3855",
     "dataRange": { "min": -500, "max": 9000 }
   }
 }
@@ -440,9 +404,9 @@ v = factor × rawValue + offset
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/tilejson-datapng-extension/0.3.0/schema.json",
+  "$id": "https://example.org/tilejson-datapng-extension/0.4.0/schema.json",
   "title": "TileJSON DataPNG Extension",
-  "description": "産総研データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
+  "description": "データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
   "type": "object",
   "required": ["type"],
   "properties": {
@@ -516,10 +480,6 @@ v = factor × rawValue + offset
       ],
       "description": "パレットPNG凡例情報（インラインまたはURL）"
     },
-    "verticalCrs": {
-      "type": "string",
-      "description": "鉛直座標参照系（EPSG コード形式を推奨）"
-    },
     "pixelMapping": {
       "type": "string",
       "enum": ["northwest", "center", "area"],
@@ -527,7 +487,7 @@ v = factor × rawValue + offset
     },
     "resampling": {
       "type": "string",
-      "enum": ["nearest", "northwest", "average", "majority", "bilinear"],
+      "enum": ["nearest", "bilinear", "average", "majority", "max", "min"],
       "description": "タイル生成時に使用されたリサンプリング手法"
     }
   },
@@ -592,7 +552,6 @@ v = factor × rawValue + offset
 | `dataRange` | Object | ○ | — | — |
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
-| `verticalCrs` | String | ○ | ○ | — |
 | `pixelMapping` | String | ○ | ○ | — |
 | `resampling` | String | ○ | ○ | — |
 
@@ -607,7 +566,6 @@ v = factor × rawValue + offset
 - **外部エンコーディング互換**: Mapbox Terrain-RGB 等への `encoding` 値の追加
 - **タイルサイズ**: 256px / 512px の明示的記述
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
-- **JGD2024 対応**: `EPSG:105604` の EPSG 正式登録を確認次第、コード確定を反映
 - **`invalidColor` の複数色対応**: 複数の無効色が必要なユースケースが判明した場合、`Array of Array[3]` への拡張を検討
 
 ---
