@@ -23,8 +23,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 
 以下は本バージョンの対象外とし、将来バージョンで検討する。
 
-- 点群PNG（Point Cloud PNG）
-- ベクトル型グリッドPNG（24ビット分割による多チャネル表現）
+- リストPNG（List PNG。固定長レコードデータ。点群PNG（Point Cloud PNG）を含む）
 - Mapbox Terrain-RGB 等の外部エンコーディング互換
 
 ### 1.3 参照仕様
@@ -38,7 +37,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 
 ### 1.4 バージョニング
 
-本仕様は [Semantic Versioning 2.0.0](https://semver.org/) に従う。0.x.y の間は後方互換性を保証しない。1.0.0 への移行は、複数の独立した実装による相互運用性の確認をもって行う。`datapng` オブジェクト内にバージョン番号フィールドは設けない。仕様バージョンは TileJSON を配信するシステム側で管理する。
+本仕様は [Semantic Versioning 2.0.0](https://semver.org/) に従う。0.x.y の間は後方互換性を保証しない。1.0.0 への移行は、複数の独立した実装による相互運用性の確認をもって行う。`datapng` オブジェクト内にバージョン番号フィールドは設けない。
 
 ---
 
@@ -126,7 +125,7 @@ v = factor × rawValue + offset
 2. **invalidColor チェック**: `invalidColor` が指定されている場合、ピクセルの RGB 値が `invalidColor` と完全一致するかを判定する。アルファ値は考慮しない。一致した場合は無効値とする。
 3. 上記いずれにも該当しないピクセルに対してのみ、変換式を適用する。
 
-> **補足**: `invalidColor` は1色のみ指定可能とする。複数の無効色が必要なユースケースが判明した場合は、将来バージョンで `Array of Array[3]` への拡張を検討する。
+> **補足**: `invalidColor` は1色のみ指定可能とする。
 
 **例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
@@ -228,26 +227,26 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 > **鉛直基準面（測地系）について**: 標高タイル等、値が鉛直方向の物理量を表す場合の基準面（測地系・ジオイドモデル等）は、専用フィールドを設けず TileJSON 既存の `description` フィールドに自由記述する（§1.1）。鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なるため、データが依拠する基準面を `description` に明示することが望ましい。
 
-### 3.4 `datapng.pixelMapping` / `datapng.resampling` — ピクセル解釈とリサンプリング
+### 3.4 `datapng.pixelAnchor` / `datapng.resampling` — ピクセル解釈とリサンプリング
 
-ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelMapping` がピクセルの空間的意味を定義し、`resampling` が値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
+ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelAnchor` がピクセルの空間的意味を定義し、`resampling` が値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `pixelMapping` | String (enum) | OPTIONAL | — | ピクセルの値が地理空間上のどの位置・範囲を表すか。省略時の解釈はクライアント実装依存 |
+| `pixelAnchor` | String (enum) | OPTIONAL | — | 値がセル内のどこに対応するか（点位置または領域全体）。省略時の解釈はクライアント実装依存 |
 | `resampling` | String (enum) | OPTIONAL | — | タイル生成時に使用されたリサンプリングアルゴリズム |
 
-**`pixelMapping` の指定可能な値（点型・領域型）:**
+**`pixelAnchor` の指定可能な値（点型・領域型）:**
 
 | 種別 | 値 | 説明 |
 |------|----|------|
 | 点型 | `"northwest"` | ピクセル北西端（左上）の点の値を表す |
 | 点型 | `"center"` | ピクセル中央点の値を表す |
-| 領域型 | `"area"` | ピクセル範囲全体の代表値を表す（範囲内の平均・合計・カウント等） |
+| 領域型 | `"area"` | 特定の点ではなくピクセル範囲全体に対応する代表値（範囲内の平均・合計・カウント等） |
 
 **`resampling` の指定可能な値（点系・領域系）:**
 
-`pixelMapping` の種別に対応し、点型には点系（単一点の選択・補間）、領域型には領域系（範囲の集約）のアルゴリズムが用いられる。
+`pixelAnchor` の種別に対応し、点型には点系（単一点の選択・補間）、領域型には領域系（範囲の集約）のアルゴリズムが用いられる。
 
 | 系統 | 値 | 説明 |
 |------|----|------|
@@ -257,6 +256,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 | 領域系 | `"majority"` | 多数決法（面積最大のカテゴリを採用） |
 | 領域系 | `"max"` | 最大値法（例: 浸水深の安全側集約） |
 | 領域系 | `"min"` | 最小値法 |
+| 領域系 | `"sum"` | 合計値法（例: セル内のポイント数・人口の集約） |
 
 ---
 
@@ -283,7 +283,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "pixelMapping": "northwest",
+    "pixelAnchor": "northwest",
     "dataRange": { "min": -500, "max": 9000 }
   }
 }
@@ -308,7 +308,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
     "factor": 0.01,
     "unit": "m",
     "invalidColor": [128, 0, 0],
-    "pixelMapping": "area",
+    "pixelAnchor": "area",
     "resampling": "average",
     "dataRange": { "min": -500, "max": 9000 },
     "precision": 0.1
@@ -479,14 +479,14 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       ],
       "description": "パレットPNG凡例情報（インラインまたはURL）"
     },
-    "pixelMapping": {
+    "pixelAnchor": {
       "type": "string",
       "enum": ["northwest", "center", "area"],
-      "description": "ピクセル値と地理座標の対応方法"
+      "description": "値がセル内のどこに対応するか（点位置または領域全体）"
     },
     "resampling": {
       "type": "string",
-      "enum": ["nearest", "bilinear", "average", "majority", "max", "min"],
+      "enum": ["nearest", "bilinear", "average", "majority", "max", "min", "sum"],
       "description": "タイル生成時に使用されたリサンプリング手法"
     }
   },
@@ -551,7 +551,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 | `dataRange` | Object | ○ | — | — |
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
-| `pixelMapping` | String | ○ | ○ | — |
+| `pixelAnchor` | String | ○ | ○ | — |
 | `resampling` | String | ○ | ○ | — |
 
 ✔ = 必須、○ = 任意、— = 該当なし
@@ -560,12 +560,10 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 ## 8. 今後の検討事項
 
-- **点群PNG（Point Cloud PNG）** の対応: `type: "pointcloud"` 追加およびカラム定義スキーマ
-- **ベクトル型グリッドPNG**: 24ビットを分割して複数チャネルを持つ場合のスキーマ定義
+- **リストPNG（List PNG）の対応**: 固定長レコードデータ（点群PNG（Point Cloud PNG）を含む）への対応。`type` 値の追加とカラム定義スキーマ
 - **外部エンコーディング互換**: Mapbox Terrain-RGB 等への `encoding` 値の追加
 - **タイルサイズ**: 256px / 512px の明示的記述
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
-- **`invalidColor` の複数色対応**: 複数の無効色が必要なユースケースが判明した場合、`Array of Array[3]` への拡張を検討
 
 ---
 
