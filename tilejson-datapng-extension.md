@@ -284,7 +284,6 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
     "factor": 0.01,
     "unit": "m",
     "pixelMapping": "northwest",
-    "resampling": "nearest",
     "dataRange": { "min": -500, "max": 9000 }
   }
 }
