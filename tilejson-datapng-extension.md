@@ -1,6 +1,6 @@
 # TileJSON DataPNG Extension (Draft)
 
-**バージョン: 0.5.0 (2026-06-14)**
+**バージョン: 0.6.0 (2026-06-14)**
 
 データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
 
@@ -24,7 +24,6 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 以下は本バージョンの対象外とし、将来バージョンで検討する。
 
 - リストPNG（List PNG。固定長レコードデータ。点群PNG（Point Cloud PNG）を含む）
-- Mapbox Terrain-RGB 等の外部エンコーディング互換
 
 ### 1.3 参照仕様
 
@@ -100,14 +99,15 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset` |
-| `offset` | Number | OPTIONAL | `0` | オフセット *o* |
+| `encoding` | String | OPTIONAL | `"datapng"` | RGB→値の復号方式。詳細は §3.2.1 |
+| `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset`（`encoding` が `"datapng"` の場合のみ有効） |
+| `offset` | Number | OPTIONAL | `0` | オフセット *o*（`encoding` が `"datapng"` の場合のみ有効） |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
 | `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
 | `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
 | `precision` | Number | OPTIONAL | — | 元データの有効な最小単位。`factor` はエンコーディングの分解能（例: 0.01m刻み）であり、`precision` はデータとして意味のある最小の差（例: 0.1m）を示す |
 
-変換式:
+デフォルトの `encoding`（`"datapng"`）の変換式:
 
 ```
 r' = (r < 128) ? r : r - 256
@@ -116,6 +116,25 @@ v = factor × rawValue + offset
 ```
 
 `rawValue` は24ビット符号付き整数の全域（-8,388,608 〜 8,388,607）を取りうる。実装は少なくとも32ビット整数型で保持しなければならない（MUST）。
+
+#### 3.2.1 エンコーディング方式（`encoding`）
+
+`encoding` は、ピクセルの RGB 値からデータ値を復号する方式を指定する。**本拡張における数値PNGの正式なエンコーディングは `"datapng"`（符号付き24ビット整数）である。** `"mapbox"`・`"terrarium"` 等は、外部エコシステムで広く流通する標高RGBタイルとの相互運用のために提供する**互換エンコーディング**である。
+
+| `encoding` 値 | 意味 | 復号式 | `factor`/`offset` |
+|------|------|--------|:-----------------:|
+| `"datapng"`（デフォルト） | データPNG標準（符号付き24ビット整数） | §3.2 の変換式 | 適用 |
+| `"mapbox"` | Mapbox Terrain-RGB 互換 | `v = -10000 + (r × 65536 + g × 256 + b) × 0.1` | 無視 |
+| `"terrarium"` | Mapzen/Terrarium 互換 | `v = (r × 256 + g + b / 256) - 32768` | 無視 |
+
+- `"mapbox"`・`"terrarium"` の復号式は固定であり、出力値の単位はメートル（m）である。`encoding` が `"datapng"` 以外の場合、クライアントは `factor`・`offset` を無視しなければならない（MUST）。
+- `encoding` の値が何であっても、無効値判定（透明度チェック・`invalidColor` チェック。下記参照）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
+- `encoding` は将来の互換エンコーディング追加に開かれた拡張可能なリストである。クライアントは認識できない `encoding` 値を持つタイルを復号できないため、PNG画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
+
+```jsonc
+// Mapbox Terrain-RGB 互換タイルの例
+{ "datapng": { "type": "numerical", "encoding": "mapbox", "unit": "m" } }
+```
 
 #### 無効値の判定
 
@@ -382,6 +401,31 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 }
 ```
 
+### 4.6 AWS Terrain Tiles（Terrarium 互換エンコーディング）
+
+外部エコシステムの標高RGBタイル（Mapzen/Terrarium 形式）を `encoding` で取り込む例。復号式は固定のため `factor`・`offset` は指定しない。
+
+```json
+{
+  "tilejson": "3.0.0",
+  "name": "AWS Terrain Tiles (Terrarium)",
+  "description": "AWS Open Data の全球標高タイル（Mapzen/Terrarium 形式）。Vertical datum: EGM2008 geoid height.",
+  "attribution": "Mapzen, AWS, and data providers",
+  "tiles": [
+    "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+  ],
+  "minzoom": 0,
+  "maxzoom": 15,
+
+  "datapng": {
+    "type": "numerical",
+    "encoding": "terrarium",
+    "unit": "m",
+    "dataRange": { "min": -500, "max": 9000 }
+  }
+}
+```
+
 ---
 
 ## 5. JSON Schema
@@ -393,7 +437,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/tilejson-datapng-extension/0.5.0/schema.json",
+  "$id": "https://example.org/tilejson-datapng-extension/0.6.0/schema.json",
   "title": "TileJSON DataPNG Extension",
   "description": "データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
   "type": "object",
@@ -403,6 +447,10 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       "type": "string",
       "enum": ["numerical", "palette"],
       "description": "データPNGの種別"
+    },
+    "encoding": {
+      "type": "string",
+      "description": "数値PNG用の復号方式。正式値は \"datapng\"（符号付き24ビット整数・既定値）。互換値として \"mapbox\"（Mapbox Terrain-RGB）, \"terrarium\"（Mapzen/Terrarium）等を許容する拡張可能なリスト"
     },
     "factor": {
       "type": "number",
@@ -488,6 +536,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       },
       "then": {
         "properties": {
+          "encoding": { "default": "datapng" },
           "factor":   { "default": 1 },
           "offset":   { "default": 0 }
         }
@@ -515,7 +564,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 1. TileJSON をパースし、`datapng` キーの有無を確認する。
 2. `datapng` が存在しない場合、通常のラスタータイルとして扱う。
 3. `datapng.type` に応じたデコーダを選択する。
-4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して `factor`・`offset` による値変換を行う。
+4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して `encoding`（§3.2.1）で指定された復号式で値変換を行う。`encoding` が `"datapng"`（既定）なら `factor`・`offset` を適用する。認識できない `encoding` 値の場合は §3.2.1 に従いフォールバックする。
 5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って RGB 完全一致による凡例検索を行う。
 
 ### 6.2 後方互換性
@@ -534,6 +583,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 | フィールド | 型 | 数値PNG | パレットPNG | デフォルト |
 |-----------|-----|:-------:|:-----------:|-----------|
 | `type` | String | ✔ | ✔ | — (必須) |
+| `encoding` | String | ○ | — | `"datapng"` |
 | `factor` | Number | ○ | — | `1` |
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
@@ -550,7 +600,6 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 ## 8. 今後の検討事項
 
 - **リストPNG（List PNG）の対応**: 固定長レコードデータ（点群PNG（Point Cloud PNG）を含む）への対応。`type` 値の追加とカラム定義スキーマ
-- **外部エンコーディング互換**: Mapbox Terrain-RGB 等への `encoding` 値の追加
 - **タイルサイズ**: 256px / 512px の明示的記述
 - **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
 
