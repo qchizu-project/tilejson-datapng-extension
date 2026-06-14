@@ -99,15 +99,15 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `encoding` | String | OPTIONAL | `"datapng"` | RGB→値の復号方式。詳細は §3.2.1 |
-| `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset`（`encoding` が `"datapng"` の場合のみ有効） |
-| `offset` | Number | OPTIONAL | `0` | オフセット *o*（`encoding` が `"datapng"` の場合のみ有効） |
+| `specialEncoding` | `false` または String | OPTIONAL | `false` | 正式なデータPNG以外の特殊なエンコード方式。`false` は正式エンコード。詳細は §3.2.1 |
+| `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset`（`specialEncoding` が `false` の場合のみ有効） |
+| `offset` | Number | OPTIONAL | `0` | オフセット *o*（`specialEncoding` が `false` の場合のみ有効） |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
 | `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
 | `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
 | `precision` | Number | OPTIONAL | — | 元データの有効な最小単位。`factor` はエンコーディングの分解能（例: 0.01m刻み）であり、`precision` はデータとして意味のある最小の差（例: 0.1m）を示す |
 
-デフォルトの `encoding`（`"datapng"`）の変換式:
+正式なデータPNGエンコード（`specialEncoding` 省略時／`false`）の変換式:
 
 ```
 r' = (r < 128) ? r : r - 256
@@ -117,23 +117,23 @@ v = factor × rawValue + offset
 
 `rawValue` は24ビット符号付き整数の全域（-8,388,608 〜 8,388,607）を取りうる。実装は少なくとも32ビット整数型で保持しなければならない（MUST）。
 
-#### 3.2.1 エンコーディング方式（`encoding`）
+#### 3.2.1 特殊なエンコード（`specialEncoding`）
 
-`encoding` は、ピクセルの RGB 値からデータ値を復号する方式を指定する。**本拡張における数値PNGの正式なエンコーディングは `"datapng"`（符号付き24ビット整数）である。** `"mapbox"`・`"terrarium"` 等は、外部エコシステムで広く流通する標高RGBタイルとの相互運用のために提供する**互換エンコーディング**である。
+`specialEncoding` は、正式なデータPNG以外の**特殊なエンコード**方式を指定する。`false`（既定）または省略時は、本拡張の正式な数値PNGエンコード（符号付き24ビット整数）として §3.2 の変換式で復号する。`"mapbox"`・`"terrarium"` 等の値を指定した場合は、それぞれの方式で配信された既存タイルとして復号する（互換エンコーディング）。
 
-| `encoding` 値 | 意味 | 復号式 | `factor`/`offset` |
+| `specialEncoding` 値 | 意味 | 復号式 | `factor`/`offset` |
 |------|------|--------|:-----------------:|
-| `"datapng"`（デフォルト） | データPNG標準（符号付き24ビット整数） | §3.2 の変換式 | 適用 |
+| `false`（デフォルト） | 正式なデータPNGエンコード（符号付き24ビット整数） | §3.2 の変換式 | 適用 |
 | `"mapbox"` | Mapbox Terrain-RGB 互換 | `v = -10000 + (r × 65536 + g × 256 + b) × 0.1` | 無視 |
 | `"terrarium"` | Mapzen/Terrarium 互換 | `v = (r × 256 + g + b / 256) - 32768` | 無視 |
 
-- `"mapbox"`・`"terrarium"` の復号式は固定であり、出力値の単位はメートル（m）である。`encoding` が `"datapng"` 以外の場合、クライアントは `factor`・`offset` を無視しなければならない（MUST）。
-- `encoding` の値が何であっても、無効値判定（透明度チェック・`invalidColor` チェック。下記参照）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
-- `encoding` は将来の互換エンコーディング追加に開かれた拡張可能なリストである。クライアントは認識できない `encoding` 値を持つタイルを復号できないため、PNG画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
+- `"mapbox"`・`"terrarium"` の復号式は固定であり、出力値の単位はメートル（m）である。`specialEncoding` に特殊なエンコード（`false` 以外）が指定されている場合、クライアントは `factor`・`offset` を無視しなければならない（MUST）。
+- `specialEncoding` の値が何であっても、無効値判定（透明度チェック・`invalidColor` チェック。下記参照）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
+- `specialEncoding` の文字列値は将来の特殊なエンコード追加に開かれた拡張可能なリストである。クライアントは認識できない `specialEncoding` 値を持つタイルを復号できないため、PNG画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
 
 ```jsonc
 // Mapbox Terrain-RGB 互換タイルの例
-{ "datapng": { "type": "numerical", "encoding": "mapbox", "unit": "m" } }
+{ "datapng": { "type": "numerical", "specialEncoding": "mapbox", "unit": "m" } }
 ```
 
 #### 無効値の判定
@@ -274,157 +274,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 ## 4. 完全な TileJSON 例
 
-### 4.1 産総研シームレス標高タイル（統合DEM）
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "シームレス標高タイル 統合DEM",
-  "description": "産総研が提供する統合標高データ。基盤地図情報数値標高モデル(DEM5A等)、ASTER GDEM、GEBCO等を統合。ピクセルは北西端の標高値をcm精度で保持。測地系: JGD2011。",
-  "version": "1.1.9",
-  "attribution": "産総研地質調査総合センター CC BY 4.0 互換",
-  "scheme": "xyz",
-  "tiles": [
-    "https://tiles.gsj.jp/tiles/elev/mixed/{z}/{y}/{x}.png"
-  ],
-  "minzoom": 0,
-  "maxzoom": 15,
-  "bounds": [120.0, 20.0, 155.0, 50.0],
-
-  "datapng": {
-    "type": "numerical",
-    "factor": 0.01,
-    "unit": "m",
-    "support": { "type": "point", "anchor": "northwest" },
-    "dataRange": { "min": -500, "max": 9000 }
-  }
-}
-```
-
-### 4.2 国土地理院 標高タイル PNG形式
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "地理院標高タイル（DEM5C）",
-  "description": "国土地理院 基盤地図情報数値標高モデル 5mメッシュ。標高基準面: 東京湾平均海面。",
-  "attribution": "国土地理院",
-  "tiles": [
-    "https://cyberjapandata.gsi.go.jp/xyz/dem5c_png/{z}/{x}/{y}.png"
-  ],
-  "minzoom": 1,
-  "maxzoom": 15,
-
-  "datapng": {
-    "type": "numerical",
-    "factor": 0.01,
-    "unit": "m",
-    "invalidColor": [128, 0, 0],
-    "support": { "type": "block" },
-    "dataRange": { "min": -500, "max": 9000 },
-    "precision": 0.1
-  }
-}
-```
-
-### 4.3 国土交通省 洪水浸水想定区域（パレットPNG）
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "洪水浸水想定区域（想定最大規模）",
-  "description": "国土交通省ハザードマップポータルサイトより配信。想定し得る最大規模の降雨による浸水深。",
-  "attribution": "国土交通省ハザードマップポータルサイト",
-  "tiles": [
-    "https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png"
-  ],
-  "minzoom": 2,
-  "maxzoom": 17,
-
-  "datapng": {
-    "type": "palette",
-    "legend": {
-      "title": "浸水深",
-      "items": [
-        { "r": 245, "g": 245, "b": 50, "title": "0.5m未満"    },
-        { "r": 255, "g": 216, "b":  0, "title": "0.5～3.0m"   },
-        { "r": 255, "g": 153, "b":  0, "title": "3.0～5.0m"   },
-        { "r": 255, "g":  40, "b":  0, "title": "5.0～10.0m"  },
-        { "r": 165, "g":   0, "b": 33, "title": "10.0～20.0m" }
-      ]
-    }
-  }
-}
-```
-
-### 4.4 20万分の1日本シームレス地質図（パレットPNG + 外部凡例）
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "20万分の1日本シームレス地質図 V2",
-  "description": "産総研地質調査総合センター。地質単元ごとにユニークな色が割り当てられたパレットPNGタイル。",
-  "attribution": "産総研地質調査総合センター CC BY 4.0 互換",
-  "tiles": [
-    "https://gbank.gsj.jp/seamless/v2/api/1.2/tiles/{z}/{y}/{x}.png"
-  ],
-  "minzoom": 0,
-  "maxzoom": 13,
-
-  "datapng": {
-    "type": "palette",
-    "legend": "https://gbank.gsj.jp/seamless/v2/api/1.2/legend.json"
-  }
-}
-```
-
-### 4.5 Copernicus DEM GLO-30（全球標高データ）
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "Copernicus DEM GLO-30",
-  "description": "Copernicus Digital Elevation Model at 30m resolution. Global coverage. Vertical datum: EGM2008 geoid height.",
-  "attribution": "© ESA Copernicus",
-  "tiles": [
-    "https://example.org/copernicus-dem-glo30/{z}/{x}/{y}.png"
-  ],
-  "minzoom": 0,
-  "maxzoom": 12,
-
-  "datapng": {
-    "type": "numerical",
-    "factor": 0.01,
-    "unit": "m",
-    "dataRange": { "min": -500, "max": 9000 }
-  }
-}
-```
-
-### 4.6 AWS Terrain Tiles（Terrarium 互換エンコーディング）
-
-外部エコシステムの標高RGBタイル（Mapzen/Terrarium 形式）を `encoding` で取り込む例。復号式は固定のため `factor`・`offset` は指定しない。
-
-```json
-{
-  "tilejson": "3.0.0",
-  "name": "AWS Terrain Tiles (Terrarium)",
-  "description": "AWS Open Data の全球標高タイル（Mapzen/Terrarium 形式）。Vertical datum: EGM2008 geoid height.",
-  "attribution": "Mapzen, AWS, and data providers",
-  "tiles": [
-    "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
-  ],
-  "minzoom": 0,
-  "maxzoom": 15,
-
-  "datapng": {
-    "type": "numerical",
-    "encoding": "terrarium",
-    "unit": "m",
-    "dataRange": { "min": -500, "max": 9000 }
-  }
-}
-```
+> **（準備中）** 完全な TileJSON 例は今後追記する。
 
 ---
 
@@ -448,9 +298,13 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       "enum": ["numerical", "palette"],
       "description": "データPNGの種別"
     },
-    "encoding": {
-      "type": "string",
-      "description": "数値PNG用の復号方式。正式値は \"datapng\"（符号付き24ビット整数・既定値）。互換値として \"mapbox\"（Mapbox Terrain-RGB）, \"terrarium\"（Mapzen/Terrarium）等を許容する拡張可能なリスト"
+    "specialEncoding": {
+      "oneOf": [
+        { "const": false },
+        { "type": "string" }
+      ],
+      "default": false,
+      "description": "正式なデータPNG以外の特殊なエンコード方式。false（既定）は正式なデータPNGエンコード（符号付き24ビット整数）。互換値として \"mapbox\"（Mapbox Terrain-RGB）, \"terrarium\"（Mapzen/Terrarium）等を許容する拡張可能なリスト"
     },
     "factor": {
       "type": "number",
@@ -536,7 +390,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       },
       "then": {
         "properties": {
-          "encoding": { "default": "datapng" },
+          "specialEncoding": { "default": false },
           "factor":   { "default": 1 },
           "offset":   { "default": 0 }
         }
@@ -564,7 +418,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 1. TileJSON をパースし、`datapng` キーの有無を確認する。
 2. `datapng` が存在しない場合、通常のラスタータイルとして扱う。
 3. `datapng.type` に応じたデコーダを選択する。
-4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して `encoding`（§3.2.1）で指定された復号式で値変換を行う。`encoding` が `"datapng"`（既定）なら `factor`・`offset` を適用する。認識できない `encoding` 値の場合は §3.2.1 に従いフォールバックする。
+4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して値変換を行う。`specialEncoding` が `false`（既定）なら正式なデータPNGエンコードとして `factor`・`offset` を適用する。`specialEncoding` に特殊なエンコード（§3.2.1）が指定されていればその固定復号式を用いる。認識できない `specialEncoding` 値の場合は §3.2.1 に従いフォールバックする。
 5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って RGB 完全一致による凡例検索を行う。
 
 ### 6.2 後方互換性
@@ -583,7 +437,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 | フィールド | 型 | 数値PNG | パレットPNG | デフォルト |
 |-----------|-----|:-------:|:-----------:|-----------|
 | `type` | String | ✔ | ✔ | — (必須) |
-| `encoding` | String | ○ | — | `"datapng"` |
+| `specialEncoding` | `false`/String | ○ | — | `false` |
 | `factor` | Number | ○ | — | `1` |
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
