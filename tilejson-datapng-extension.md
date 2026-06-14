@@ -1,6 +1,6 @@
 # TileJSON DataPNG Extension (Draft)
 
-**バージョン: 0.4.0 (2026-06-11)**
+**バージョン: 0.5.0 (2026-06-14)**
 
 データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
 
@@ -227,36 +227,29 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 > **鉛直基準面（測地系）について**: 標高タイル等、値が鉛直方向の物理量を表す場合の基準面（測地系・ジオイドモデル等）は、専用フィールドを設けず TileJSON 既存の `description` フィールドに自由記述する（§1.1）。鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なるため、データが依拠する基準面を `description` に明示することが望ましい。
 
-### 3.4 `datapng.pixelAnchor` / `datapng.resampling` — ピクセル解釈とリサンプリング
+### 3.4 `datapng.support` — ピクセル値の support（格納値が代表する領域）
 
-ピクセル値が地理空間上のどの位置・範囲を表すか、またタイル生成時にどのリサンプリングが使用されたかを示す。両フィールドは密接に関連しており、`pixelAnchor` がピクセルの空間的意味を定義し、`resampling` が値の導出方法を記録する。`resampling` はタイル生成時の来歴情報（provenance）であり、クライアントへの動作指示ではない。
+格納されたピクセル値が、セル内のどの幾何学的領域を代表するかを示す。これは地理統計でいう **support**（値の台）であり、値が**点**に対応するか（点 support）、**セル全体**に対応するか（面 support, block support）を区別する。`support` はピクセル値の空間的意味を定義するメタデータであり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `pixelAnchor` | String (enum) | OPTIONAL | — | 値がセル内のどこに対応するか（点位置または領域全体）。省略時の解釈はクライアント実装依存 |
-| `resampling` | String (enum) | OPTIONAL | — | タイル生成時に使用されたリサンプリングアルゴリズム |
+| `support` | Object | OPTIONAL | — | 格納値の support（点 / 面）。省略時の解釈はクライアント実装依存 |
 
-**`pixelAnchor` の指定可能な値（点型・領域型）:**
+**`support` オブジェクトのフィールド:**
 
-| 種別 | 値 | 説明 |
-|------|----|------|
-| 点型 | `"northwest"` | ピクセル北西端（左上）の点の値を表す |
-| 点型 | `"center"` | ピクセル中央点の値を表す |
-| 領域型 | `"area"` | 特定の点ではなくピクセル範囲全体に対応する代表値（範囲内の平均・合計・カウント等） |
+| サブキー | 型 | 必須 | 説明 |
+|---------|----|------|------|
+| `type` | String (enum) | **REQUIRED** | support の種別。`"point"`（点 support）または `"block"`（面 support） |
+| `anchor` | String (enum) | OPTIONAL | 値が留まるセル内の点。`type` が `"point"` の場合のみ有効。`"northwest"`（北西端＝左上）または `"center"`（中央） |
 
-**`resampling` の指定可能な値（点系・領域系）:**
+| `type` の値 | 意味 |
+|------|------|
+| `"point"` | 値はセル内の特定の点（`anchor` で指定）に対応する点 support |
+| `"block"` | 値は特定の点ではなくセル範囲全体に対応する代表値（面 support / block support） |
 
-`pixelAnchor` の種別に対応し、点型には点系（単一点の選択・補間）、領域型には領域系（範囲の集約）のアルゴリズムが用いられる。
+`type` が `"block"` の場合、`anchor` が含まれていてもクライアントはこれを無視しなければならない（MUST）。
 
-| 系統 | 値 | 説明 |
-|------|----|------|
-| 点系 | `"nearest"` | 最近隣法（Nearest Neighbor） |
-| 点系 | `"bilinear"` | 双線形補間 |
-| 領域系 | `"average"` | 平均値法 |
-| 領域系 | `"majority"` | 多数決法（面積最大のカテゴリを採用） |
-| 領域系 | `"max"` | 最大値法（例: 浸水深の安全側集約） |
-| 領域系 | `"min"` | 最小値法 |
-| 領域系 | `"sum"` | 合計値法（例: セル内のポイント数・人口の集約） |
+> **量の性質と support は別物**: `support` は値が代表する幾何学的領域を示すものであり、対象量が本来「点で定義できる量」か否かとは独立である。標高のような内包的（点で定義できる）量であっても、タイル生成時にセル平均で格納されている場合は面 support（`block`）となる（change of support）。`block` は「セル全体の代表値」であることのみを表し、その代表値が平均・最大・合計のいずれで導出されたかは規定しない。集約方法を明示する必要がある場合は、TileJSON 既存の `description` フィールドに自由記述する（§1.1）。
 
 ---
 
@@ -283,7 +276,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
     "type": "numerical",
     "factor": 0.01,
     "unit": "m",
-    "pixelAnchor": "northwest",
+    "support": { "type": "point", "anchor": "northwest" },
     "dataRange": { "min": -500, "max": 9000 }
   }
 }
@@ -308,8 +301,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
     "factor": 0.01,
     "unit": "m",
     "invalidColor": [128, 0, 0],
-    "pixelAnchor": "area",
-    "resampling": "average",
+    "support": { "type": "block" },
     "dataRange": { "min": -500, "max": 9000 },
     "precision": 0.1
   }
@@ -341,8 +333,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
         { "r": 255, "g":  40, "b":  0, "title": "5.0～10.0m"  },
         { "r": 165, "g":   0, "b": 33, "title": "10.0～20.0m" }
       ]
-    },
-    "resampling": "nearest"
+    }
   }
 }
 ```
@@ -363,8 +354,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
   "datapng": {
     "type": "palette",
-    "legend": "https://gbank.gsj.jp/seamless/v2/api/1.2/legend.json",
-    "resampling": "majority"
+    "legend": "https://gbank.gsj.jp/seamless/v2/api/1.2/legend.json"
   }
 }
 ```
@@ -403,7 +393,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/tilejson-datapng-extension/0.4.0/schema.json",
+  "$id": "https://example.org/tilejson-datapng-extension/0.5.0/schema.json",
   "title": "TileJSON DataPNG Extension",
   "description": "データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
   "type": "object",
@@ -479,15 +469,15 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
       ],
       "description": "パレットPNG凡例情報（インラインまたはURL）"
     },
-    "pixelAnchor": {
-      "type": "string",
-      "enum": ["northwest", "center", "area"],
-      "description": "値がセル内のどこに対応するか（点位置または領域全体）"
-    },
-    "resampling": {
-      "type": "string",
-      "enum": ["nearest", "bilinear", "average", "majority", "max", "min", "sum"],
-      "description": "タイル生成時に使用されたリサンプリング手法"
+    "support": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type":   { "type": "string", "enum": ["point", "block"] },
+        "anchor": { "type": "string", "enum": ["northwest", "center"] }
+      },
+      "additionalProperties": false,
+      "description": "格納値の support（点/面）。anchor は type が point の場合のみ有効"
     }
   },
   "allOf": [
@@ -551,8 +541,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 | `dataRange` | Object | ○ | — | — |
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
-| `pixelAnchor` | String | ○ | ○ | — |
-| `resampling` | String | ○ | ○ | — |
+| `support` | Object | ○ | ○ | — |
 
 ✔ = 必須、○ = 任意、— = 該当なし
 
