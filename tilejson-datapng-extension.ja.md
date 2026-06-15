@@ -460,4 +460,6 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 ## ライセンス
 
-本仕様案は CC BY 4.0 で公開する。本仕様に準拠したソフトウェアの実装・配布にあたって、本仕様の著作権者へのクレジット表示は不要である。
+本仕様案は [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed.ja)（パブリックドメイン献呈）で公開する。本仕様の利用・実装・配布にあたって、著作権者へのクレジット表示は不要である。
+
+> This specification is released under CC0 1.0 Universal.
