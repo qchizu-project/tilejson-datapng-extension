@@ -248,27 +248,25 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 ### 3.4 `datapng.support` — ピクセル値の support（格納値が代表する領域）
 
-格納されたピクセル値が、セル内のどの幾何学的領域を代表するかを示す。これは地理統計でいう **support**（値の台）であり、値が**点**に対応するか（点 support）、**セル全体**に対応するか（面 support, block support）を区別する。`support` はピクセル値の空間的意味を定義するメタデータであり、クライアントへの動作指示ではない。
+格納されたピクセル値が、セル内のどの幾何学的領域を代表するかを示す。これは地理統計でいう **support** であり、値が**点**に対応するか（point support）、**セル全体**に対応するか（block support）を区別する。`support` はピクセル値の空間的意味を定義するメタデータであり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `support` | Object | OPTIONAL | — | 格納値の support（点 / 面）。省略時の解釈はクライアント実装依存 |
+| `support` | Object | OPTIONAL | — | 格納値の support（point / block）。省略時の解釈はクライアント実装依存 |
 
 **`support` オブジェクトのフィールド:**
 
 | サブキー | 型 | 必須 | 説明 |
 |---------|----|------|------|
-| `type` | String (enum) | **REQUIRED** | support の種別。`"point"`（点 support）または `"block"`（面 support） |
+| `type` | String (enum) | **REQUIRED** | support の種別。`"point"`（point support）または `"block"`（block support） |
 | `anchor` | String (enum) | OPTIONAL | 値が留まるセル内の点。`type` が `"point"` の場合のみ有効。`"northwest"`（北西端＝左上）または `"center"`（中央） |
 
 | `type` の値 | 意味 |
 |------|------|
-| `"point"` | 値はセル内の特定の点（`anchor` で指定）に対応する点 support |
-| `"block"` | 値は特定の点ではなくセル範囲全体に対応する代表値（面 support / block support） |
+| `"point"` | 値はセル内の特定の点（`anchor` で指定）に対応する point support |
+| `"block"` | 値は特定の点ではなくセル範囲全体に対応する代表値（block support） |
 
 `type` が `"block"` の場合、`anchor` が含まれていてもクライアントはこれを無視しなければならない（MUST）。
-
-> **量の性質と support は別物**: `support` は値が代表する幾何学的領域を示すものであり、対象量が本来「点で定義できる量」か否かとは独立である。標高のような内包的（点で定義できる）量であっても、タイル生成時にセル平均で格納されている場合は面 support（`block`）となる（change of support）。`block` は「セル全体の代表値」であることのみを表し、その代表値が平均・最大・合計のいずれで導出されたかは規定しない。集約方法を明示する必要がある場合は、TileJSON 既存の `description` フィールドに自由記述する（§1.1）。
 
 ---
 
