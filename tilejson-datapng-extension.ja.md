@@ -1,5 +1,7 @@
 # TileJSON DataPNG Extension (Draft)
 
+> **言語 / Language**: この文書は**日本語版**です。英語版（`tilejson-datapng-extension.en.md`）は今後追加予定です。
+
 **バージョン: 0.6.0 (2026-06-14)**
 
 データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
@@ -33,10 +35,11 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
+| Data Tile Schema Specification | (Geolonia Inc., Draft) |
 
 ### 1.4 バージョニング
 
-本仕様は [Semantic Versioning 2.0.0](https://semver.org/) に従う。0.x.y の間は後方互換性を保証しない。1.0.0 への移行は、複数の独立した実装による相互運用性の確認をもって行う。`datapng` オブジェクト内にバージョン番号フィールドは設けない。
+本仕様自体のバージョンは [Semantic Versioning 2.0.0](https://semver.org/) に従って管理する。0.x.y の間は後方互換性を保証せず、1.0.0 は複数の独立実装による相互運用性が確認された時点で公開する。
 
 ---
 
@@ -248,27 +251,25 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 
 ### 3.4 `datapng.support` — ピクセル値の support（格納値が代表する領域）
 
-格納されたピクセル値が、セル内のどの幾何学的領域を代表するかを示す。これは地理統計でいう **support**（値の台）であり、値が**点**に対応するか（点 support）、**セル全体**に対応するか（面 support, block support）を区別する。`support` はピクセル値の空間的意味を定義するメタデータであり、クライアントへの動作指示ではない。
+格納されたピクセル値が、セル内のどの幾何学的領域を代表するかを示す。これは地理統計でいう **support** であり、値が**点**に対応するか（point support）、**セル全体**に対応するか（block support）を区別する。`support` はピクセル値の空間的意味を定義するメタデータであり、クライアントへの動作指示ではない。
 
 | キー | 型 | 必須 | デフォルト | 説明 |
 |------|----|------|-----------|------|
-| `support` | Object | OPTIONAL | — | 格納値の support（点 / 面）。省略時の解釈はクライアント実装依存 |
+| `support` | Object | OPTIONAL | — | 格納値の support（point / block）。省略時の解釈はクライアント実装依存 |
 
 **`support` オブジェクトのフィールド:**
 
 | サブキー | 型 | 必須 | 説明 |
 |---------|----|------|------|
-| `type` | String (enum) | **REQUIRED** | support の種別。`"point"`（点 support）または `"block"`（面 support） |
+| `type` | String (enum) | **REQUIRED** | support の種別。`"point"`（point support）または `"block"`（block support） |
 | `anchor` | String (enum) | OPTIONAL | 値が留まるセル内の点。`type` が `"point"` の場合のみ有効。`"northwest"`（北西端＝左上）または `"center"`（中央） |
 
 | `type` の値 | 意味 |
 |------|------|
-| `"point"` | 値はセル内の特定の点（`anchor` で指定）に対応する点 support |
-| `"block"` | 値は特定の点ではなくセル範囲全体に対応する代表値（面 support / block support） |
+| `"point"` | 値はセル内の特定の点（`anchor` で指定）に対応する point support |
+| `"block"` | 値は特定の点ではなくセル範囲全体に対応する代表値（block support） |
 
 `type` が `"block"` の場合、`anchor` が含まれていてもクライアントはこれを無視しなければならない（MUST）。
-
-> **量の性質と support は別物**: `support` は値が代表する幾何学的領域を示すものであり、対象量が本来「点で定義できる量」か否かとは独立である。標高のような内包的（点で定義できる）量であっても、タイル生成時にセル平均で格納されている場合は面 support（`block`）となる（change of support）。`block` は「セル全体の代表値」であることのみを表し、その代表値が平均・最大・合計のいずれで導出されたかは規定しない。集約方法を明示する必要がある場合は、TileJSON 既存の `description` フィールドに自由記述する（§1.1）。
 
 ---
 
@@ -379,7 +380,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
         "anchor": { "type": "string", "enum": ["northwest", "center"] }
       },
       "additionalProperties": false,
-      "description": "格納値の support（点/面）。anchor は type が point の場合のみ有効"
+      "description": "格納値の support（point/block）。anchor は type が point の場合のみ有効"
     }
   },
   "allOf": [
@@ -454,11 +455,11 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
 ## 8. 今後の検討事項
 
 - **リストPNG（List PNG）の対応**: 固定長レコードデータ（点群PNG（Point Cloud PNG）を含む）への対応。`type` 値の追加とカラム定義スキーマ
-- **タイルサイズ**: 256px / 512px の明示的記述
-- **凡例フォーマットの拡張**: 数値範囲による連続的な色分け凡例への対応
 
 ---
 
 ## ライセンス
 
-本仕様案は CC BY 4.0 で公開する。本仕様に準拠したソフトウェアの実装・配布にあたって、本仕様の著作権者へのクレジット表示は不要である。
+本仕様案は [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed.ja)（パブリックドメイン献呈）で公開する。本仕様の利用・実装・配布にあたって、著作権者へのクレジット表示は不要である。
+
+> This specification is released under CC0 1.0 Universal.
