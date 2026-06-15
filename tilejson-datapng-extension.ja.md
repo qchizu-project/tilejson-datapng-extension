@@ -1,5 +1,7 @@
 # TileJSON DataPNG Extension (Draft)
 
+> **言語 / Language**: この文書は**日本語版**です。英語版（`tilejson-datapng-extension.en.md`）は今後追加予定です。
+
 **バージョン: 0.6.0 (2026-06-14)**
 
 データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
