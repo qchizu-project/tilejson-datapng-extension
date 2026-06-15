@@ -34,7 +34,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | TileJSON 3.0.0 | https://github.com/mapbox/tilejson-spec/tree/master/3.0.0 |
 | RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
-| グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
+| グリッドPNGタイル仕様 (v0.1) | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
 | Data Tile Schema Specification | (Geolonia Inc., Draft) |
 
 ### 1.4 バージョニング
@@ -138,10 +138,10 @@ v = factor × rawValue + offset
 
 ```jsonc
 // Mapbox Terrain-RGB 互換タイルの例
-{ "datapng": { "type": "numerical", "specialEncoding": "mapbox", "unit": "m" } }
+{ "datapng": { "type": "numerical", "specialEncoding": "mapbox" } }
 ```
 
-#### 無効値の判定
+#### 3.2.2 無効値の判定
 
 クライアントは以下の順序で無効値判定を行わなければならない（MUST）:
 
@@ -412,7 +412,7 @@ v = factor × rawValue + offset
 1. TileJSON をパースし、`datapng` キーの有無を確認する。
 2. `datapng` が存在しない場合、通常のラスタータイルとして扱う。
 3. `datapng.type` に応じたデコーダを選択する。
-4. 数値PNGの場合、§3.2 の無効値判定手順に従い、有効なピクセルに対して値変換を行う。`specialEncoding` が `false`（既定）なら正式なデータPNGエンコードとして `factor`・`offset` を適用する。`specialEncoding` に特殊なエンコード（§3.2.1）が指定されていればその固定復号式を用いる。認識できない `specialEncoding` 値の場合は §3.2.1 に従いフォールバックする。
+4. 数値PNGの場合、§3.2.2 の無効値判定手順に従い、有効なピクセルに対して値変換を行う。`specialEncoding` が `false`（既定）なら正式なデータPNGエンコードとして `factor`・`offset` を適用する。`specialEncoding` に特殊なエンコード（§3.2.1）が指定されていればその固定復号式を用いる。認識できない `specialEncoding` 値の場合は §3.2.1 に従いフォールバックする。
 5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って RGB 完全一致による凡例検索を行う。
 
 ### 6.2 後方互換性
