@@ -35,6 +35,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 | RFC 2119 | https://datatracker.ietf.org/doc/html/rfc2119 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
+| Data Tile Schema Specification | (Geolonia Inc., Draft) |
 
 ### 1.4 バージョニング
 
@@ -379,7 +380,7 @@ JSON凡例フォーマットに準拠した構造をそのまま埋め込む。
         "anchor": { "type": "string", "enum": ["northwest", "center"] }
       },
       "additionalProperties": false,
-      "description": "格納値の support（点/面）。anchor は type が point の場合のみ有効"
+      "description": "格納値の support（point/block）。anchor は type が point の場合のみ有効"
     }
   },
   "allOf": [
