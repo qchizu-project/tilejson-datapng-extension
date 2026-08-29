@@ -2,7 +2,7 @@
 
 > **言語 / Language**: この文書は**日本語版**です。英語版（`tilejson-datapng-extension.en.md`）は今後追加予定です。
 
-**バージョン: 0.6.0 (2026-06-14)**
+**バージョン: 0.7.0 (2026-08-29)**
 
 データPNG仕様（[データPNG](https://gsj-seamless.jp/labs/datapng/)）に基づくタイルセットのメタデータを TileJSON 3.0.0 に記述するための拡張仕様（案）。
 
@@ -19,6 +19,7 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格だが�
 - TileJSON 3.0.0 との**後方互換性**を維持する（未知キーとして無視可能）。
 - データPNG仕様（グリッドPNGタイル仕様 v0.1）に準拠する。
 - 本バージョンでは**グリッドPNG**（数値PNG・パレットPNG）を対象とする。
+- タイル画像の**標準形式は WebP（可逆圧縮）**とし、PNG も許容する（§2.2）。「データPNG」という名称と `datapng` キーは先行するデータPNG仕様との連続性のために維持するが、**格納形式は PNG に限らない**。
 - 測量年次・データソース・鉛直基準面（測地系）等の自由記載は TileJSON 既存の `description` フィールドを使用する。
 
 ### 1.2 対象外（将来拡張）
@@ -54,6 +55,7 @@ TileJSON のルートオブジェクトに **`datapng`** キー（Object）を�
   "minzoom": 0,
   "maxzoom": 15,
   "tileSize": 256,
+  "format": "png",
 
   "datapng": {
     // ── 本拡張で定義するフィールド群 ──
@@ -70,6 +72,20 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 | `tileSize` | Number | **REQUIRED** | タイル画像の一辺のピクセル数（例: `256`, `512`） |
 
 > **注記**: `tileSize` はタイル画像の物理的なピクセルサイズであり、データソース固有の属性である。MapLibre GL JS 等の地図ライブラリでは Style JSON のソース定義で `tileSize` を指定するが、同一ソースを複数レイヤーで共有する場合、データソース側（TileJSON）で定義する方が合理的である。
+
+### 2.2 `format` — タイル画像形式
+
+TileJSON 3.0.0 にはタイル画像の形式を示すフィールドがない。本拡張では TileJSON のルートオブジェクトに **`format`** フィールド（String）を追加する。
+
+| キー | 型 | 必須 | デフォルト | 説明 |
+|------|----|------|-----------|------|
+| `format` | String (enum) | OPTIONAL | `"webp"` | タイル画像の形式。`"webp"` または `"png"` |
+
+グリッドデータタイルの**標準形式は WebP（可逆圧縮）**とする。PNG と比較して、可逆圧縮のまま配信容量を削減でき、主要なブラウザがすべて対応しているためである。PNG での配信も許容するが、その場合は `format` に `"png"` を明示しなければならない（MUST）。
+
+`format` を省略した場合、クライアントはタイルが WebP であると仮定してよい（MAY）。ただし実装は、宣言された形式によらず**実際に取得したバイト列の形式で復号すべきである**（SHOULD）。`format` はキャッシュ制御や事前の対応可否判定のためのヒントであり、復号の唯一の根拠ではない。
+
+> **重要（無効値との関係）**: WebP の可逆圧縮は、完全に透明な画素（アルファ = 0）の RGB 値を保存しない。このため、**アルファチャンネルを持つタイルでは `invalidColor` による無効値判定が成立しない**。無効値の表現方法は §3.2.2 に従うこと。
 
 ---
 
@@ -106,7 +122,7 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 | `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset`（`specialEncoding` が `false` の場合のみ有効） |
 | `offset` | Number | OPTIONAL | `0` | オフセット *o*（`specialEncoding` が `false` の場合のみ有効） |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
-| `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
+| `invalidColor` | Array[3] of int | OPTIONAL | — | 無効色 `[r, g, b]`（1色のみ指定可能）。**アルファチャンネルを持たないタイル専用**。アルファチャンネルを持つタイルと併用してはならない（MUST NOT）。詳細は §3.2.2 |
 | `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
 | `precision` | Number | OPTIONAL | — | 元データの有効な最小単位。`factor` はエンコーディングの分解能（例: 0.01m刻み）であり、`precision` はデータとして意味のある最小の差（例: 0.1m）を示す |
 
@@ -133,8 +149,8 @@ v = factor × rawValue + offset
 | `"terrarium"` | Mapzen/Terrarium 互換 | `v = (r × 256 + g + b / 256) - 32768` | 無視 |
 
 - `"mapbox"`・`"terrarium"` の復号式は固定であり、出力値の単位はメートル（m）である。`specialEncoding` に特殊なエンコード（`false` 以外）が指定されている場合、クライアントは `factor`・`offset` を無視しなければならない（MUST）。
-- `specialEncoding` の値が何であっても、無効値判定（透明度チェック・`invalidColor` チェック。下記参照）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
-- `specialEncoding` の文字列値は将来の特殊なエンコード追加に開かれた拡張可能なリストである。クライアントは認識できない `specialEncoding` 値を持つタイルを復号できないため、PNG画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
+- `specialEncoding` の値が何であっても、無効値判定（§3.2.2）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
+- `specialEncoding` の文字列値は将来の特殊なエンコード追加に開かれた拡張可能なリストである。クライアントは認識できない `specialEncoding` 値を持つタイルを復号できないため、画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
 
 ```jsonc
 // Mapbox Terrain-RGB 互換タイルの例
@@ -143,18 +159,31 @@ v = factor × rawValue + offset
 
 #### 3.2.2 無効値の判定
 
+無効値の表現方法は、タイルがアルファチャンネルを持つかどうかで**排他的に**定まる。
+
+| タイルの構成 | 無効値の表現 | `invalidColor` |
+|-------------|-------------|---------------|
+| アルファチャンネルあり（RGBA） | アルファ値 0 | 指定してはならない（MUST NOT） |
+| アルファチャンネルなし（RGB） | `invalidColor` で指定した色 | 指定してよい（1色のみ） |
+
 クライアントは以下の順序で無効値判定を行わなければならない（MUST）:
 
-1. **透明度チェック**: アルファ値が 0 のピクセルは無効値とする。半透明ピクセル（0 < A < 255）は有効として扱う。
-2. **invalidColor チェック**: `invalidColor` が指定されている場合、ピクセルの RGB 値が `invalidColor` と完全一致するかを判定する。アルファ値は考慮しない。一致した場合は無効値とする。
+1. **タイルがアルファチャンネルを持つ場合**: アルファ値が 0 のピクセルを無効値とする。半透明ピクセル（0 < A < 255）は有効として扱う。`invalidColor` が指定されていても**無視しなければならない**（MUST）。
+2. **タイルがアルファチャンネルを持たない場合**: `invalidColor` が指定されていれば、ピクセルの RGB 値が `invalidColor` と完全一致するかを判定する。一致した場合は無効値とする。
 3. 上記いずれにも該当しないピクセルに対してのみ、変換式を適用する。
+
+> **なぜ両者を併用しないか**: WebP の可逆圧縮は、完全に透明な画素（アルファ = 0）の RGB 値を保存しない（エンコーダが圧縮効率のために書き換える）。したがって、アルファチャンネルを持つ WebP タイルでは「宣言した `invalidColor` が実際のタイルに格納されている」ことを保証できず、RGB 完全一致による判定が成立しない。アルファチャンネルを持つタイルではアルファのみを、持たないタイルでは `invalidColor` のみを無効値の根拠とすることで、形式によらず判定が一意に定まる。
 
 > **補足**: `invalidColor` は1色のみ指定可能とする。
 
 **例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
+アルファチャンネルを持たない PNG タイルで、無効値を `(128, 0, 0)` で表す例。
+
 ```json
 {
+  "tilejson": "3.0.0",
+  "format": "png",
   "datapng": {
     "type": "numerical",
     "factor": 0.01,
@@ -162,6 +191,23 @@ v = factor × rawValue + offset
     "invalidColor": [128, 0, 0],
     "dataRange": { "min": -500, "max": 9000 },
     "precision": 1
+  }
+}
+```
+
+**例: アルファチャンネルを持つ WebP タイル**
+
+無効値はアルファ 0 で表すため、`invalidColor` は指定しない。
+
+```json
+{
+  "tilejson": "3.0.0",
+  "format": "webp",
+  "datapng": {
+    "type": "numerical",
+    "factor": 0.01,
+    "unit": "m",
+    "dataRange": { "min": -500, "max": 9000 }
   }
 }
 ```
@@ -238,7 +284,7 @@ v = factor × rawValue + offset
 
 #### 3.3.2 凡例の外部参照
 
-凡例データが大きい場合はURLで参照する。`legend` の値が文字列の場合、クライアントはそのURLから §3.3.1 と同じ構造の凡例オブジェクトを取得する（MUST）。フェッチが失敗した場合（HTTPエラー・タイムアウト・CORSエラー等）、クライアントはタイルを PNG 画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。リトライポリシーはクライアント実装依存とする。
+凡例データが大きい場合はURLで参照する。`legend` の値が文字列の場合、クライアントはそのURLから §3.3.1 と同じ構造の凡例オブジェクトを取得する（MUST）。フェッチが失敗した場合（HTTPエラー・タイムアウト・CORSエラー等）、クライアントはタイルを画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。リトライポリシーはクライアント実装依存とする。
 
 > **鉛直基準面（測地系）について**: 標高タイル等、値が鉛直方向の物理量を表す場合の基準面（測地系・ジオイドモデル等）は、専用フィールドを設けず TileJSON 既存の `description` フィールドに自由記述する（§1.1）。鉛直基準面は国・地域ごとに異なり、同一地点でも基準面の違いにより標高値が異なるため、データが依拠する基準面を `description` に明示することが望ましい。
 
@@ -274,14 +320,16 @@ v = factor × rawValue + offset
 
 ## 5. JSON Schema
 
-以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。ルートレベルの `tileSize` フィールドは TileJSON ルートオブジェクトのプロパティであり、本スキーマの対象外である。
+以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。ルートレベルの `tileSize`・`format` フィールドは TileJSON ルートオブジェクトのプロパティであり、本スキーマの対象外である。
+
+同じスキーマを [`schema/datapng-0.7.0.schema.json`](./schema/datapng-0.7.0.schema.json) としてファイルでも配布する（実装から直接参照できるようにするため）。**本文とファイルは同一のスキーマを表さなければならない**（MUST。整形の差異は問わない）。
 
 > **注記**: `$id` はドラフト段階のプレースホルダーであり、正式公開時に実際のホスティングURLへ変更する。
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/tilejson-datapng-extension/0.6.0/schema.json",
+  "$id": "https://example.org/tilejson-datapng-extension/0.7.0/schema.json",
   "title": "TileJSON DataPNG Extension",
   "description": "データPNG仕様に基づくグリッドPNGタイルセットメタデータの TileJSON 拡張",
   "type": "object",
@@ -317,7 +365,7 @@ v = factor × rawValue + offset
       "items": { "type": "integer", "minimum": 0, "maximum": 255 },
       "minItems": 3,
       "maxItems": 3,
-      "description": "追加無効色 [r, g, b]"
+      "description": "無効色 [r, g, b]。アルファチャンネルを持たないタイル専用"
     },
     "dataRange": {
       "type": "object",
@@ -411,14 +459,14 @@ v = factor × rawValue + offset
 
 1. TileJSON をパースし、`datapng` キーの有無を確認する。
 2. `datapng` が存在しない場合、通常のラスタータイルとして扱う。
-3. `datapng.type` に応じたデコーダを選択する。
-4. 数値PNGの場合、§3.2.2 の無効値判定手順に従い、有効なピクセルに対して値変換を行う。`specialEncoding` が `false`（既定）なら正式なデータPNGエンコードとして `factor`・`offset` を適用する。`specialEncoding` に特殊なエンコード（§3.2.1）が指定されていればその固定復号式を用いる。認識できない `specialEncoding` 値の場合は §3.2.1 に従いフォールバックする。
+3. `datapng.type` に応じたデコーダを選択する。タイル画像の形式は `format`（§2.2）が示すが、復号は実際に取得したバイト列の形式に従う。
+4. 数値PNGの場合、§3.2.2 の無効値判定手順に従い、有効なピクセルに対して値変換を行う。**タイルがアルファチャンネルを持つかどうかで無効値の判定方法が決まる**点に注意する。`specialEncoding` が `false`（既定）なら正式なデータPNGエンコードとして `factor`・`offset` を適用する。`specialEncoding` に特殊なエンコード（§3.2.1）が指定されていればその固定復号式を用いる。認識できない `specialEncoding` 値の場合は §3.2.1 に従いフォールバックする。
 5. パレットPNGの場合、`legend`（インラインまたはURLフェッチ）を使って RGB 完全一致による凡例検索を行う。
 
 ### 6.2 後方互換性
 
 - `datapng` を認識しないクライアントはこのキーを無視する（TileJSON 3.0.0 §1 に準拠）。
-- タイル画像自体は有効な PNG であるため、画像としての表示は引き続き可能。
+- タイル画像自体は有効な WebP または PNG であるため、画像としての表示は引き続き可能。
 
 ### 6.3 凡例項目の拡張性
 
@@ -435,13 +483,21 @@ v = factor × rawValue + offset
 | `factor` | Number | ○ | — | `1` |
 | `offset` | Number | ○ | — | `0` |
 | `unit` | String | ○ | — | — |
-| `invalidColor` | [r,g,b] | ○ | — | — |
+| `invalidColor` | [r,g,b] | ○ ※ | — | — |
 | `dataRange` | Object | ○ | — | — |
 | `precision` | Number | ○ | — | — |
 | `legend` | Obj/URL | — | ✔ | — |
 | `support` | Object | ○ | ○ | — |
 
 ✔ = 必須、○ = 任意、— = 該当なし
+※ `invalidColor` は**アルファチャンネルを持たないタイル専用**（§3.2.2）。
+
+TileJSON ルートオブジェクトに追加するフィールド:
+
+| フィールド | 型 | 必須 | デフォルト | 参照 |
+|-----------|-----|:----:|-----------|------|
+| `tileSize` | Number | ✔ | — | §2.1 |
+| `format` | String | ○ | `"webp"` | §2.2 |
 
 ---
 
