@@ -107,7 +107,7 @@ TileJSON 3.0.0 にはラスタータイルのピクセルサイズを示すフ�
 | `factor` | Number | OPTIONAL | `1` | 係数 *f*。 `v = f × rawValue + offset`（`specialEncoding` が `false` の場合のみ有効） |
 | `offset` | Number | OPTIONAL | `0` | オフセット *o*（`specialEncoding` が `false` の場合のみ有効） |
 | `unit` | String | OPTIONAL | — | 変換後の値の単位（例: `"m"`, `"cm"`, `"℃"`） |
-| `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能）。完全に透明なピクセルの判定には使えない（§3.2.2） |
+| `invalidColor` | Array[3] of int | OPTIONAL | — | 追加無効色 `[r, g, b]`。透明ピクセルに加えて無効値として扱う色（1色のみ指定可能） |
 | `dataRange` | Object | OPTIONAL | — | デコード後の値の期待範囲。`min`（Number）と `max`（Number）を持つ |
 | `precision` | Number | OPTIONAL | — | 元データの有効な最小単位。`factor` はエンコーディングの分解能（例: 0.01m刻み）であり、`precision` はデータとして意味のある最小の差（例: 0.1m）を示す |
 
@@ -134,7 +134,7 @@ v = factor × rawValue + offset
 | `"terrarium"` | Mapzen/Terrarium 互換 | `v = (r × 256 + g + b / 256) - 32768` | 無視 |
 
 - `"mapbox"`・`"terrarium"` の復号式は固定であり、出力値の単位はメートル（m）である。`specialEncoding` に特殊なエンコード（`false` 以外）が指定されている場合、クライアントは `factor`・`offset` を無視しなければならない（MUST）。
-- `specialEncoding` の値が何であっても、無効値判定（§3.2.2）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
+- `specialEncoding` の値が何であっても、無効値判定（透明度チェック・`invalidColor` チェック。下記参照）、および `dataRange`・`precision`・`support` の解釈は共通して適用される。
 - `specialEncoding` の文字列値は将来の特殊なエンコード追加に開かれた拡張可能なリストである。クライアントは認識できない `specialEncoding` 値を持つタイルを復号できないため、画像としてそのまま表示するか、エラーを上位に通知すべきである（SHOULD）。
 
 ```jsonc
@@ -152,7 +152,7 @@ v = factor × rawValue + offset
 
 > **補足**: `invalidColor` は1色のみ指定可能とする。
 
-> **`invalidColor` で完全に透明なピクセルを指せない理由**: WebP の可逆圧縮は、完全に透明な画素（アルファ = 0）の RGB 値を保存しない（エンコーダが圧縮効率のために書き換える）。そのため、透明な画素の RGB を判定に使うことはできない。なお、それらの画素は 1. の透明度チェックで既に無効と判定されるため、判定結果は変わらない。
+> **補足**: 完全に透明なピクセルを対象外とするのは、WebP の可逆圧縮がそのようなピクセルの RGB 値を保存しないためである。それらのピクセルは 1. で既に無効と判定されるため、判定結果は変わらない。
 
 **例: 国土地理院標高タイル（rawValue をメートル単位に変換）**
 
@@ -279,7 +279,7 @@ v = factor × rawValue + offset
 
 以下は `datapng` オブジェクトの JSON Schema（Draft 2020-12）定義である。ルートレベルの `tileSize` フィールドは TileJSON ルートオブジェクトのプロパティであり、本スキーマの対象外である。
 
-同じスキーマを [`schema/datapng-0.7.0.schema.json`](./schema/datapng-0.7.0.schema.json) としてファイルでも配布する（実装から直接参照できるようにするため）。**本文とファイルは同一のスキーマを表さなければならない**（MUST。整形の差異は問わない）。
+同じスキーマを [`schema/datapng-0.7.0.schema.json`](./schema/datapng-0.7.0.schema.json) としてファイルでも配布する（実装から直接参照できるようにするため）。内容は本文と同一である（整形の差異を除く）。
 
 > **注記**: `$id` はドラフト段階のプレースホルダーであり、正式公開時に実際のホスティングURLへ変更する。
 
