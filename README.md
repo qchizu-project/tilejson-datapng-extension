@@ -15,7 +15,7 @@
 
 TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格ですが、**データPNG**（[データPNG](https://gsj-seamless.jp/labs/datapng/) 仕様に基づく数値PNG・パレットPNG）をタイル配信する際に必要な属性情報を記述する手段を持ちません。
 
-本拡張は、TileJSON が未知キーを無視する性質を利用し、ルートオブジェクトに **`datapng`** キーを追加します。これにより、後方互換性を保ったまま、クライアントがタイルのデコード・描画に必要な情報（種別・変換係数・単位・無効値・凡例など）を事前に取得できます。あわせて、タイル画像のピクセルサイズ（`tileSize`）もルートに追加します。
+本拡張は、TileJSON が未知キーを無視する性質を利用し、ルートオブジェクトに **`datapng`** キーを追加します。これにより、後方互換性を保ったまま、クライアントがタイルのデコード・描画に必要な情報（種別・変換係数・単位・無効値・凡例など）を事前に取得できます。
 
 「データPNG」という名称ですが、格納形式は PNG のほか **WebP（可逆圧縮）**も使用できます。
 
@@ -47,12 +47,6 @@ TileJSON 3.0.0 は地図タイルセットの汎用メタデータ規格です�
 | TileJSON 3.0.0 | https://github.com/mapbox/tilejson-spec/tree/master/3.0.0 |
 | データPNG | https://gsj-seamless.jp/labs/datapng/ |
 | グリッドPNGタイル仕様 (v0.1) | https://gsj-seamless.jp/labs/datapng/gridpngtileSpec.html |
-
-## 実装
-
-| 実装 | 説明 |
-|------|------|
-| [datapng-tiler](https://github.com/qchizu-project/datapng-tiler) | 本仕様に準拠したタイルと TileJSON を生成する CLI / Python ライブラリ（MIT） |
 
 ## ライセンス
 
